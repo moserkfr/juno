@@ -17,6 +17,12 @@ import fs from "node:fs/promises";
 const prod = process.argv.includes("--prod") || process.env.NODE_ENV === "production";
 const watch = process.argv.includes("--watch");
 
+try { await fs.access("firebase.config.js"); }
+catch {
+  console.error("\n  Missing firebase.config.js — copy firebase.config.example.js and fill in your project's web config.\n");
+  process.exit(1);
+}
+
 await fs.rm("dist", { recursive: true, force: true });
 await fs.mkdir("dist", { recursive: true });
 

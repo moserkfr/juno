@@ -12,9 +12,11 @@ import { createTitlebar } from "./ui/titlebar.js";
 import { createStatusbar } from "./ui/statusbar.js";
 import { createScene } from "./ui/scene.js";
 import { createNav, TABS } from "./ui/nav.js";
-import { createToasts } from "./ui/toast.js";
+import { createToasts, toast } from "./ui/toast.js";
 import { placeholder } from "./views/placeholder.js";
 import { settingsView } from "./views/settings.js";
+import { authView } from "./views/auth.js";
+import { watchAuth } from "./firebase/auth.js";
 
 const api = window.bytebun;
 
@@ -24,6 +26,7 @@ const prefs = loadLocalPrefs();
 applyTheme(prefs.theme); // before first paint, so there's no theme flash
 
 const store = createStore({
+  auth: { status: "loading", user: null }, // see firebase/auth.js for the statuses
   view: "list",
   prefs,
   win: {},                 // window state mirrored from the main process
@@ -85,21 +88,33 @@ document.getElementById("app").append(
 );
 
 let current = { id: null, inst: null };
-function showView(id) {
-  if (current.id === id) return;
+/** key changes => remount. The auth gate uses "auth:<status>" keys. */
+function showView(key, viewDef) {
+  if (current.id === key) return;
   current.inst?.destroy?.();
   viewEl.replaceChildren();
   viewEl.scrollTop = 0;
-  current = { id, inst: VIEWS[id].mount(viewEl, { store, actions }) || {} };
+  current = { id: key, inst: viewDef.mount(viewEl, { store, actions }) || {} };
 }
 
+const GATE_LINES = {
+  loading: "Waking up...",
+  signedOut: "Who goes there? Sign in to start!",
+  unverified: "Almost there! Check your inbox.",
+  denied: "Hmm, I don't know this one...",
+};
+
 function render(s) {
+  const gated = s.auth.status !== "ready";
   titlebar.update(s);
   status.update(s);
-  scene.update(s);
+  // While gated, ByteBun talks instead of showing chat messages.
+  scene.update(gated ? { ...s, dialogue: { who: "BYTEBUN", text: GATE_LINES[s.auth.status] } } : s);
   nav.update(s);
+  nav.el.style.display = gated ? "none" : "";
   offline.classList.toggle("on", !s.online);
-  showView(s.view);
+  if (gated) showView("auth:" + s.auth.status, authView);
+  else showView(s.view, VIEWS[s.view]);
   current.inst.update?.(s);
 }
 store.subscribe(render);
@@ -115,8 +130,20 @@ api.getState().then(win => {
 addEventListener("online", () => store.set({ online: true }));
 addEventListener("offline", () => store.set({ online: false }));
 
+/* ---------------- auth ---------------- */
+
+watchAuth(a => {
+  const was = store.get().auth.status;
+  store.set({ auth: a });
+  if (a.status === "ready" && was !== "ready" && was !== "loading") {
+    toast("WELCOME!", `Signed in as ${a.user.displayName}.`, "info");
+  }
+  if (a.offline) toast("OFFLINE", "Signed in from cache. Changes will sync when you're online.", "warn");
+});
+
 // Ctrl+1..5 switches tabs
 addEventListener("keydown", e => {
+  if (store.get().auth.status !== "ready") return;
   if (e.ctrlKey && e.key >= "1" && e.key <= "5") actions.go(TABS[+e.key - 1].id);
 });
 

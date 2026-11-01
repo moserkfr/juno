@@ -8,6 +8,8 @@
 import { h, raw } from "../core/dom.js";
 import { PRESETS } from "../ui/themes.js";
 import { sparkle } from "../art/sprites.js";
+import { setDisplayName, signOut } from "../firebase/auth.js";
+import { toast, explainError } from "../ui/toast.js";
 
 const SWATCH_KEYS = ["bg", "a1", "a2", "a3", "line"];
 
@@ -57,8 +59,28 @@ export const settingsView = {
     const aot = toggle("Always on top", () => store.get().win.alwaysOnTop, v => api.setAlwaysOnTop(v));
     const sol = toggle("Start on login", () => store.get().win.startOnLogin, v => api.setStartOnLogin(v));
 
+    /* ---- account ---- */
+    const user = s0.auth.user;
+    const nameIn = h("input.pinput.grow", { value: user.displayName, maxLength: 30, "aria-label": "Display name" });
+    const saveName = async () => {
+      const v = nameIn.value.trim();
+      if (!v || v === store.get().auth.user.displayName) return;
+      try {
+        const n = await setDisplayName(v);
+        store.set({ auth: { ...store.get().auth, user: { ...store.get().auth.user, displayName: n } } });
+        toast("SAVED", "Display name updated.", "info");
+      } catch (e) { toast("COULDN'T SAVE NAME", explainError(e), "error"); }
+    };
+    nameIn.addEventListener("change", saveName);
+    nameIn.addEventListener("keydown", e => { if (e.key === "Enter") nameIn.blur(); });
+
     el.append(
       h("div.vhead", {}, h("h2", {}, "SETTINGS"), raw(sparkle(2))),
+      h("section.card.pbox", {},
+        h("h3", {}, "ACCOUNT"),
+        h("div.row", {}, h("span", {}, "Name"), nameIn),
+        h("div.row", {}, h("span.muted.grow.selectable", { style: { fontSize: "13px" } }, user.email),
+          h("button.pbtn.small", { onclick: () => signOut() }, "SIGN OUT"))),
       h("section.card.pbox", {},
         h("h3", {}, "THEME"),
         grid,
