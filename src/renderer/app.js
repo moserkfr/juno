@@ -16,6 +16,7 @@ import { createStatusbar } from "./ui/statusbar.js";
 import { createScene } from "./ui/scene.js";
 import { createNav, TABS } from "./ui/nav.js";
 import { createToasts, toast, explainError } from "./ui/toast.js";
+import { createPill } from "./ui/pill.js";
 import { placeholder } from "./views/placeholder.js";
 import { settingsView } from "./views/settings.js";
 import { authView } from "./views/auth.js";
@@ -199,6 +200,8 @@ store.subscribe(s => {
 
   const last = fresh.at(-1);
   const name = s.people[last.uid]?.displayName || last.name || "Buddy";
+  // A nudge makes ByteBun hop, even in the pill.
+  if (fresh.some(m => m.type === "nudge")) { scene.mascot.celebrate(); pill.mascot.celebrate(); }
   if (fresh.length === 1) { const d = describe(last, name); api.notify(d.title, d.body); }
   else api.notify(name, `sent ${fresh.length} messages: "${last.text.slice(0, 80)}"`);
 });
@@ -328,8 +331,15 @@ const scene = createScene({ onDialogueClick: () => actions.go("chat") });
 const nav = createNav(actions.go);
 const viewEl = h("main.view", { id: "view" });
 const offline = h("div.offline", {}, "OFFLINE · changes will sync when you're back");
+const pill = createPill({
+  onExpand(view) {
+    api.setCollapsed(false);
+    if (view && store.get().auth.status === "ready") actions.go(view);
+  },
+});
 
 document.getElementById("app").append(
+  pill.el,
   h("div.device", {},
     titlebar.el,
     h("div.screen", {},
@@ -367,7 +377,11 @@ function render(s) {
   // While gated, ByteBun talks instead of showing chat messages.
   // While gated, ByteBun talks; otherwise the buddy's latest message (or a daily line).
   scene.update({ ...s, dialogue: gated ? { who: "BYTEBUN", text: GATE_LINES[s.auth.status] } : buddyLine(s) });
-  nav.update({ ...s, due: dueCount(s.items), unread: unreadCount(s) });
+  const unread = s.auth.status === "ready" ? unreadCount(s) : 0;
+  nav.update({ ...s, due: dueCount(s.items), unread });
+  // Collapsed = the 300x70 pill; the handheld stays mounted (just hidden).
+  document.body.classList.toggle("collapsed", !!s.win.isCollapsed);
+  pill.update({ ...s, unread });
   nav.el.style.display = gated ? "none" : "";
   offline.classList.toggle("on", !s.online);
   if (gated) showView("auth:" + s.auth.status, authView);
@@ -390,8 +404,6 @@ api.onState(win => {
   if (changed && store.get().auth.status === "ready") sync.markPrefs();
 });
 api.getState().then(win => {
-  // Collapsed mode UI is built in stage 10; until then always open expanded.
-  if (win.isCollapsed) api.setCollapsed(false);
   store.set({ win });
 });
 addEventListener("online", () => store.set({ online: true }));

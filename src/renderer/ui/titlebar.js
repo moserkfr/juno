@@ -16,8 +16,7 @@ export function createTitlebar(store) {
 
   const el = h("header.titlebar", {},
     h("div.brand", {}, raw(mascotSVG("idle", 1)), "BYTEBUN"),
-    pin,
-    // col  <- enabled in stage 10 (collapsed pill mode)
+    pin, col,
     btn("min", "Minimise", () => api.minimize()),
     btn("close", "Hide to tray", () => api.hide(), ".close"),
   );

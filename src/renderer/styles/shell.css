@@ -181,3 +181,33 @@
 }
 .dialogue .who { display: flex; align-items: center; gap: 4px; }
 .dialogue .who svg { width: 12px; height: auto; }
+
+/* ---------- collapsed pill (300x70 window) ---------- */
+.pill {
+  height: 100vh; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 4px;
+  background: var(--bg);
+  border: 4px solid var(--frame);
+  outline: 2px solid var(--frame-in); outline-offset: -6px;
+  -webkit-app-region: drag;           /* drag anywhere on the pill */
+}
+.pill button { -webkit-app-region: no-drag; }
+.pl-mascot { flex: none; width: 50px; height: 54px; border: 0; padding: 0; background: none; position: relative; }
+.pl-mascot .mascot { left: 0; bottom: 8px; width: 48px; height: 44px; }
+.pl-mascot .mascot-sprite svg { margin-bottom: -6px; }
+.pl-mascot .mascot-fx { left: 34px; top: -8px; }
+.pl-mascot:hover { filter: brightness(1.05); }
+.pl-info { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.pl-row { display: flex; align-items: center; gap: 6px; font-family: var(--font-label); font-size: 12px; }
+.pl-lv { font-weight: 400; }
+.pl-pct { font-size: 10px; color: var(--muted); }
+.pl-row .battery .cells i { width: 4px; height: 6px; }
+.pl-topic { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-badge {
+  flex: none; display: flex; align-items: center; gap: 2px; padding: 2px 4px;
+  background: var(--a3); color: var(--line); border: 2px solid var(--line);
+  font-family: var(--font-label); font-size: 9px;
+}
+.pl-exp { flex: none; border-color: var(--edge); color: var(--text); }
+.pl-exp:hover { background: var(--a2); color: var(--line); }
+body.collapsed .device { display: none; }
+body.collapsed .pill { display: flex !important; }

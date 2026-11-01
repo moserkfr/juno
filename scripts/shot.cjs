@@ -11,14 +11,15 @@ const out = process.argv[2] || "shots";
 const view = process.argv[3] || "settings";
 const themes = ["witch", "rainy", "matcha", "peach", "gameboy", "candy", "custom-light", "custom-dark"];
 
-ipcMain.handle("app:getState", () => ({ alwaysOnTop: true, opacity: 1, startOnLogin: true, isCollapsed: false }));
+const PILL = view === "pill";
+ipcMain.handle("app:getState", () => ({ alwaysOnTop: true, opacity: 1, startOnLogin: true, isCollapsed: PILL }));
 for (const ch of ["win:minimize", "win:hide", "win:show", "win:setCollapsed", "win:setAlwaysOnTop",
-                  "win:setOpacity", "app:setStartOnLogin", "app:applyPrefs", "app:openExternal"]) ipcMain.on(ch, () => {});
+                  "win:setOpacity", "app:setStartOnLogin", "app:applyPrefs", "app:openExternal", "app:notify", "app:setUnread", "win:flashFrame"]) ipcMain.on(ch, () => {});
 
 app.whenReady().then(async () => {
   fs.mkdirSync(out, { recursive: true });
   const win = new BrowserWindow({
-    width: 420, height: 680, frame: false, show: false,
+    width: PILL ? 300 : 420, height: PILL ? 70 : 680, frame: false, show: false,
     webPreferences: { preload: path.join(__dirname, "../src/preload/preload.js"), contextIsolation: true, sandbox: true },
   });
   // Collect page errors into a file instead of stdout (a closed pipe would crash Electron).
