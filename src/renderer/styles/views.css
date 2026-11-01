@@ -175,3 +175,52 @@
 .fav { flex: none; width: 20px; display: grid; place-items: center; }
 .fav svg { width: 16px; height: auto; }
 .fago { font-size: 11px; white-space: nowrap; }
+
+/* ---------- CHAT ---------- */
+.view.chatmode { overflow: hidden; display: flex; flex-direction: column; padding-bottom: 8px; }
+.chatmode .vhead { flex: none; margin-bottom: 6px; }
+.msgwrap { flex: 1; min-height: 0; position: relative; }
+.msgs {
+  height: 100%; overflow-y: auto; overflow-x: hidden; padding: 6px 10px; display: flex; flex-direction: column; gap: 8px;
+  background: color-mix(in srgb, var(--panel) 50%, var(--bg)); border: 2px solid var(--edge);
+}
+.cempty { text-align: center; margin: auto; font-size: 13px; }
+.dsep {
+  align-self: center; font-size: 8px; color: var(--muted); padding: 1px 6px; margin: 4px 0;
+  background: var(--bg); border: 2px dashed var(--edge);
+}
+.msg { display: flex; align-items: flex-end; gap: 6px; max-width: 86%; }
+.msg.mine { align-self: flex-end; }
+.msg.theirs { align-self: flex-start; }
+.mav { flex: none; width: 28px; display: grid; place-items: end center; }
+.mav svg { width: 24px; height: auto; }
+.bubble {
+  position: relative; padding: 6px 9px 4px; display: grid; gap: 2px; min-width: 60px;
+  background: var(--panel); margin: 2px;
+  box-shadow: 0 -2px 0 0 var(--edge), 0 2px 0 0 var(--edge), -2px 0 0 0 var(--edge), 2px 0 0 0 var(--edge);
+}
+.msg.mine .bubble { background: var(--a1); color: var(--line); }
+/* pixel tail: a 2-step stair hanging off the bottom corner */
+.bubble::after {
+  content: ""; position: absolute; bottom: -2px; width: 6px; height: 6px; background: inherit;
+  box-shadow: 0 2px 0 0 var(--edge);
+}
+.msg.theirs .bubble::after { left: -8px; box-shadow: -2px 0 0 0 var(--edge), 0 2px 0 0 var(--edge); }
+.msg.mine .bubble::after { right: -8px; box-shadow: 2px 0 0 0 var(--edge), 0 2px 0 0 var(--edge); }
+.msg.prog .bubble { background: color-mix(in srgb, var(--review) 35%, var(--panel)); color: var(--text); }
+.msg.mine.prog .bubble { background: color-mix(in srgb, var(--review) 55%, var(--a1)); color: var(--line); }
+.ptag { font-size: 8px; }
+.mtext { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mtime { font-size: 10px; opacity: .7; justify-self: end; }
+.pending { opacity: .55; }
+.nudge { align-self: center; display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 2px 8px; }
+.nudge svg { animation: pop .6s steps(4); }
+.newpill { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); }
+
+.composer { flex: none; display: grid; gap: 4px; margin-top: 8px; }
+.quick { min-height: 0; flex-wrap: wrap; gap: 6px; }
+.quick .pbtn svg { display: inline-block; }
+.crow { gap: 6px; align-items: flex-end; }
+.cinput { flex: 1; resize: none; field-sizing: content; min-height: 34px; max-height: 96px; font-size: 14px; }
+.csend { height: 34px; width: 40px; padding: 0; }
+.ccount { font-size: 8px; color: var(--muted); }

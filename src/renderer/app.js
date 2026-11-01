@@ -23,6 +23,8 @@ import { watchAuth, signOut } from "./firebase/auth.js";
 import { createSync } from "./firebase/sync.js";
 import { createBuddyWatch, logActivity } from "./firebase/buddy.js";
 import { buddyView } from "./views/buddy.js";
+import { watchChat, sendMessage, markRead } from "./firebase/chat.js";
+import { chatView } from "./views/chat.js";
 
 const api = window.bytebun;
 
@@ -39,6 +41,10 @@ const store = createStore({
   items: {},               // my progress items (synced with Firestore)
   sync: "saved",           // saving | saved | offline | error
   people: {},              // everyone's public data (firebase/buddy.js), read-only
+  messages: [],            // last 200 chat messages, oldest first
+  chatReadAt: 0,           // local "read up to" (also synced on my user doc)
+  winVisible: true,
+  winFocused: document.hasFocus(),
   progress: computeProgress({}, prefs.track, prefs.hours),
   dialogue: null,          // { who, text } latest buddy message
   mood: "idle",
@@ -102,6 +108,59 @@ function log(event) {
     if (e.code !== "unavailable") toast("ACTIVITY NOT SAVED", explainError(e), "warn");
   });
 }
+
+/* ---------------- chat ---------------- */
+
+let unsubChat = null;
+function startChat() {
+  stopChat();
+  unsubChat = watchChat(
+    messages => store.set({ messages }),
+    e => { console.error("chat", e); toast("CHAT UNAVAILABLE", explainError(e), "error"); });
+}
+function stopChat() { unsubChat?.(); unsubChat = null; }
+
+/** Newest "read up to" from this device or any other (my user doc). */
+const readAt = s => Math.max(s.chatReadAt || 0, s.people[s.auth.user?.uid]?.chatReadAt || 0);
+
+/** Messages from others that arrived after my read position. */
+function unreadCount(s) {
+  const me = s.auth.user?.uid;
+  if (!me) return 0;
+  const r = readAt(s);
+  return s.messages.filter(m => m.uid !== me && m.at > r).length;
+}
+
+/** Dialogue box: the buddy's latest message, or null (= ByteBun's line of the day). */
+function buddyLine(s) {
+  const me = s.auth.user?.uid;
+  const m = [...s.messages].reverse().find(x => x.uid !== me);
+  if (!m) return null;
+  const p = s.people[m.uid];
+  return {
+    who: (p?.displayName || m.name).toUpperCase(),
+    avatar: p?.prefs?.avatar,
+    text: m.type === "nudge" ? "♥ *poke* Hey, study buddy!" : m.text,
+  };
+}
+
+/**
+ * Mark chat read when you can actually see it: CHAT tab open AND window
+ * visible AND focused. Runs debounced AFTER renders (never inside one),
+ * and writes at most once per burst of messages.
+ */
+let readTimer = null;
+store.subscribe(() => {
+  clearTimeout(readTimer);
+  readTimer = setTimeout(() => {
+    const s = store.get();
+    if (s.auth.status !== "ready" || s.view !== "chat" || !s.winVisible || !s.winFocused) return;
+    if (!unreadCount(s)) return;
+    const newest = s.messages.at(-1)?.at || Date.now();
+    store.set({ chatReadAt: Math.max(Date.now(), newest) });
+    if (!PREVIEW) markRead(s.auth.user.uid).catch(e => console.error("markRead", e));
+  }, 600);
+});
 
 /** Mascot is sleepy until you tick something today. */
 function moodFor(items) {
@@ -179,6 +238,21 @@ const actions = {
     applyTheme(theme);
     actions.setPrefs({ theme });
   },
+  /** Send a chat message. Returns once queued locally; server rejections show a toast. */
+  sendChat(text, type = "text") {
+    const s = store.get();
+    if (PREVIEW) {
+      store.set({ messages: [...s.messages, { id: String(Date.now()), uid: s.auth.user.uid, name: s.auth.user.displayName, text, type, at: Date.now() }] });
+      return;
+    }
+    try {
+      sendMessage(s.auth.user, text, type).catch(e => toast("MESSAGE NOT SENT", explainError(e), "error"));
+    } catch (e) {
+      toast("CAN'T SEND", e.message, "warn");
+      throw e;
+    }
+  },
+  toast: (...a) => toast(...a),
   async signOut() {
     // Hand any edits from the last 800 ms to Firestore. No await: offline it
     // would wait for the server forever. setDoc queues the write in the local
@@ -195,7 +269,7 @@ const VIEWS = {
   list: listView,
   review: reviewView,
   buddy: buddyView,
-  chat: placeholder("chat", "CHAT", "Chat arrives in stage 8."),
+  chat: chatView,
   settings: settingsView,
 };
 
@@ -244,8 +318,9 @@ function render(s) {
   titlebar.update(s);
   status.update(s);
   // While gated, ByteBun talks instead of showing chat messages.
-  scene.update(gated ? { ...s, dialogue: { who: "BYTEBUN", text: GATE_LINES[s.auth.status] } } : s);
-  nav.update({ ...s, due: dueCount(s.items) });
+  // While gated, ByteBun talks; otherwise the buddy's latest message (or a daily line).
+  scene.update({ ...s, dialogue: gated ? { who: "BYTEBUN", text: GATE_LINES[s.auth.status] } : buddyLine(s) });
+  nav.update({ ...s, due: dueCount(s.items), unread: unreadCount(s) });
   nav.el.style.display = gated ? "none" : "";
   offline.classList.toggle("on", !s.online);
   if (gated) showView("auth:" + s.auth.status, authView);
@@ -285,8 +360,8 @@ function onAuth(a) {
   // Leaving: stop syncing and clear this account's data from memory.
   const items = a.status === "ready" ? takeLegacyItems(a.user.uid) : {};
   store.set({ auth: a, items, progress: computeProgress(items, prefs.track, prefs.hours), mood: moodFor(items) });
-  if (a.status === "ready" && !PREVIEW) { sync.start(a.user.uid, items); sync.touch(); buddies.start(a.user.uid); }
-  if (a.status !== "ready") { sync.stop(); buddies.stop(); store.set({ people: {} }); }
+  if (a.status === "ready" && !PREVIEW) { sync.start(a.user.uid, items); sync.touch(); buddies.start(a.user.uid); startChat(); }
+  if (a.status !== "ready") { sync.stop(); buddies.stop(); stopChat(); store.set({ people: {}, messages: [], chatReadAt: 0 }); }
   if (a.status === "ready" && was !== "ready" && was !== "loading") {
     toast("WELCOME!", `Signed in as ${a.user.displayName}.`, "info");
   }
@@ -313,7 +388,15 @@ if (PREVIEW) {
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(i => findSub(`${t}-${i}`) && (bItems[`${t}-${i}`] = { done: true })));
   bItems["arr-0"] = { done: true }; bItems["arr-1"] = { done: true, review: true };
   const hr = 3_600_000;
+  const min = 60_000;
   store.set({
+    messages: [
+      { id: "1", uid: "buddy", name: "Ruhani", type: "text", text: "did you finish recursion yet??", at: Date.now() - 26 * hr },
+      { id: "2", uid: "preview", name: "Manosh", type: "text", text: "almost! the fib tree finally clicked", at: Date.now() - 25 * hr },
+      { id: "3", uid: "buddy", name: "Ruhani", type: "progress", text: "I just finished Merge sort & quick sort (22%)", at: Date.now() - 2 * hr },
+      { id: "4", uid: "buddy", name: "Ruhani", type: "nudge", text: "♥ poke!", at: Date.now() - 30 * min },
+      { id: "5", uid: "buddy", name: "Ruhani", type: "text", text: "study session at 9? i'll do binary search 🔍", at: Date.now() - 3 * min },
+    ],
     prefs: { ...store.get().prefs, avatar: "manosh" },
     people: {
       preview: { uid: "preview", feed: [{ uid: "preview", text: "finished Recursion basics", at: Date.now() - 26 * hr }] },
@@ -331,7 +414,8 @@ if (PREVIEW) {
 // queue (synchronous part of flush), so they're sent on next launch at worst.
 addEventListener("beforeunload", () => sync.flush());
 // Hiding to tray is a good moment to save too.
-api.onVisibility(visible => { if (!visible) sync.flush(); });
+api.onVisibility(visible => { store.set({ winVisible: visible }); if (!visible) sync.flush(); });
+api.onFocus(focused => store.set({ winFocused: focused }));
 
 // Re-check the mascot's mood every 10 min (it gets sleepy after midnight).
 setInterval(() => store.set({ mood: moodFor(store.get().items) }), 10 * 60_000);

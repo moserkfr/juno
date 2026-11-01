@@ -67,6 +67,7 @@ export function createBuddyWatch(hooks) {
           displayName: x.displayName || "Player",
           prefs: normalizePrefs(x.prefs || {}),
           lastActive: ms(x.lastActive),
+          chatReadAt: ms(x.chatReadAt),   // used for MY unread count (synced across devices)
         };
         watchUser(d.id);
       });

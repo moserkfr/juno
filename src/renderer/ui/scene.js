@@ -6,6 +6,7 @@
 import { h, raw } from "../core/dom.js";
 import { cloud, sparkle, moon, sun, heart, sprout, flower } from "../art/sprites.js";
 import { createMascot } from "../art/mascot.js";
+import { avatarSVG } from "../art/avatars.js";
 
 const LINES = [
   "One topic at a time. You've got this!",
@@ -64,10 +65,13 @@ export function createScene({ onDialogueClick }) {
   updateSky();
   setInterval(updateSky, 10 * 60_000);
 
-  /** s.dialogue = { who, text } | null */
+  /** s.dialogue = { who, text, avatar? } | null */
   function update(s) {
     const d = s.dialogue;
-    who.textContent = d ? d.who : "BYTEBUN SAYS";
+    // Speaker portrait (buddy's character) + name. Name is a text node, never HTML.
+    who.replaceChildren(
+      ...(d && d.avatar !== undefined ? [raw(avatarSVG(d.avatar, 1, "head"))] : []),
+      d ? d.who : "BYTEBUN SAYS");
     say.textContent = d ? d.text : lineOfTheDay();
     mascot.setMood(s.mood || "idle");
   }

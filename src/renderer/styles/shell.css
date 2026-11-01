@@ -179,3 +179,5 @@
   .dialogue { top: 22px; bottom: 18px; }
   .dialogue .say { -webkit-line-clamp: 1; }
 }
+.dialogue .who { display: flex; align-items: center; gap: 4px; }
+.dialogue .who svg { width: 12px; height: auto; }
