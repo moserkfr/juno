@@ -7,7 +7,8 @@ import { createStore } from "./core/store.js";
 import { h } from "./core/dom.js";
 import { loadLocalPrefs, saveLocalPrefs } from "./core/prefs.js";
 import { computeProgress, findSub } from "../data/plan.js";
-import { flag, unflag, isEmpty, startOfDay } from "../data/review.js";
+import { flag, unflag, reviewed, isEmpty, startOfDay } from "../data/review.js";
+import { reviewView, dueCount } from "./views/review.js";
 import { listView } from "./views/list.js";
 import { applyTheme } from "./ui/themes.js";
 import { createTitlebar } from "./ui/titlebar.js";
@@ -119,6 +120,26 @@ const actions = {
   toggleReview(id) {
     setItem(id, (it, now) => (it.review ? unflag(it, now) : flag(it, now)));
   },
+  /** "Reviewed": advance to the next interval (+7, +30, then finished). */
+  reviewItem(id) {
+    const r = setItem(id, (it, now) => reviewed(it, now));
+    scene.mascot.celebrate();
+    if (r.after.stage >= 3) toast("ALL 3 REVIEWS DONE!", "Clear the ★ or go again?", "info");
+  },
+  /** After the last review: start a fresh +1/+7/+30 cycle. */
+  restartReview(id) {
+    setItem(id, (it, now) => flag(it, now));
+  },
+  /** Short note per item; empty = remove the field (Firestore rejects undefined). */
+  setNote(id, text) {
+    const note = String(text || "").trim().slice(0, 140);
+    const cur = store.get().items[id]?.note || "";
+    if (note === cur) return;
+    setItem(id, (it, now) => {
+      const { note: _old, ...rest } = it;
+      return note ? { ...rest, note, updatedAt: now } : { ...rest, updatedAt: now };
+    });
+  },
   setPrefs(patch) {
     const s = store.get();
     const next = { ...s.prefs, ...patch };
@@ -144,7 +165,7 @@ const actions = {
 
 const VIEWS = {
   list: listView,
-  review: placeholder("review", "REVIEW", "Spaced reviews arrive in stage 6."),
+  review: reviewView,
   buddy: placeholder("buddy", "BUDDY", "Your buddy's progress arrives in stage 7."),
   chat: placeholder("chat", "CHAT", "Chat arrives in stage 8."),
   settings: settingsView,
@@ -196,7 +217,7 @@ function render(s) {
   status.update(s);
   // While gated, ByteBun talks instead of showing chat messages.
   scene.update(gated ? { ...s, dialogue: { who: "BYTEBUN", text: GATE_LINES[s.auth.status] } } : s);
-  nav.update(s);
+  nav.update({ ...s, due: dueCount(s.items) });
   nav.el.style.display = gated ? "none" : "";
   offline.classList.toggle("on", !s.online);
   if (gated) showView("auth:" + s.auth.status, authView);
@@ -254,6 +275,8 @@ if (PREVIEW) {
   sample["rec-0"] = { done: true, updatedAt: Date.now() };
   sample["rec-2"] = flag({}, Date.now() - 86_400_000);
   sample["stl-3"] = { ...sample["stl-3"], ...flag({}, Date.now()) };
+  sample["ll-8"] = { ...flag({}, Date.now() - 9 * 86_400_000), stage: 1, nextReviewAt: Date.now() - 2 * 86_400_000, note: "forgot the dummy node trick" };
+  sample["bigo-4"] = { ...sample["bigo-4"], ...flag({}, Date.now() - 40 * 86_400_000), stage: 3, nextReviewAt: null };
   localStorage.setItem(itemsKey(uid), JSON.stringify(sample));
   onAuth({ status: "ready", user: { uid, email: "preview@local", displayName: "Preview" } });
 } else {

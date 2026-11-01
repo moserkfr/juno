@@ -118,3 +118,24 @@
 .synctext { font-size: 8px; color: var(--muted); }
 .synctext[data-state="error"] { color: var(--line); background: var(--a3); padding: 1px 3px; }
 .synctext[data-state="offline"] { color: var(--line); background: var(--review); padding: 1px 3px; }
+.sub .snote { display: block; font-size: 12px; color: var(--muted); text-decoration: none; margin-top: 2px; }
+
+/* ---------- REVIEW ---------- */
+.rsec { display: flex; align-items: center; gap: 6px; font-family: var(--font-label); font-size: 11px; margin: 4px 2px 8px; }
+.rempty { margin: 0 2px 16px; font-size: 13px; }
+.rgroup { margin-bottom: 6px; }
+.rgh { font-size: 14px; font-weight: 700; margin: 6px 2px 6px; }
+.rcard { margin: 2px 2px 12px; padding: 8px 10px; display: grid; gap: 6px; }
+.rcard.due { --bw: 4px; --bc: var(--a3); margin: 4px 4px 14px; }
+.rcard.finished { --bc: var(--done); background: color-mix(in srgb, var(--done) 12%, var(--panel)); }
+.rtopic { font-size: 8px; color: var(--muted); }
+.rtext { font-size: 14px; }
+.rmeta { display: flex; align-items: center; gap: 8px; font-size: 12px; flex-wrap: wrap; }
+.pips { display: inline-flex; gap: 2px; }
+.pips i { width: 10px; height: 8px; border: 2px solid var(--edge); background: var(--bg); }
+.pips i.on { background: var(--review); }
+.rdue { font-family: var(--font-label); font-size: 9px; }
+.rdue.hot { background: var(--a3); color: var(--line); padding: 1px 4px; }
+.note { width: calc(100% - 4px); resize: none; font-size: 13px; field-sizing: content; min-height: 28px; max-height: 80px; }
+.rbtns { min-height: 0; flex-wrap: wrap; }
+.small { font-size: 12px; }

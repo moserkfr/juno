@@ -71,7 +71,8 @@ export const listView = {
         onclick: () => actions.toggleReview(id),
       }, "★");
       return h("li.sub" + (it.done ? ".is-done" : "") + (it.review ? ".is-review" : ""), {},
-        h("span.stext.selectable", {}, subText(t.subs[i]), subPdf(t.subs[i]) ? tag("PDF", "t-pdf") : null),
+        h("span.stext.selectable", {}, subText(t.subs[i]), subPdf(t.subs[i]) ? tag("PDF", "t-pdf") : null,
+          it.note ? h("span.snote", {}, "✎ " + it.note) : null),
         done, rev);
     }
 
