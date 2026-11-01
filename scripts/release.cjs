@@ -36,4 +36,4 @@ const r = spawnSync("npx", ["electron-builder", "--win", "--publish", "always"],
   stdio: "inherit", shell: true, env: { ...process.env, GH_TOKEN: token },
 });
 if (r.status) fail("electron-builder failed (see above).");
-console.log(`\n  ✓ ${tag} published. Installed copies will update within ~6 hours or on next launch.\n`);
+console.log(`\n  ✓ ${tag} published. Installed copies pick it up within an hour, or right away via "Check for updates".\n`);
