@@ -1,0 +1,103 @@
+/* ---------------------------------------------------------------
+   Pixel primitives. The core trick: borders drawn with four hard
+   box-shadows (no blur). Corners stay empty -> stepped pixel corner.
+   No border-radius anywhere in the app.
+   --------------------------------------------------------------- */
+
+.pbox {
+  --bw: 2px;                 /* border thickness; .thick = 4px */
+  --bc: var(--edge);
+  background: var(--panel);
+  box-shadow:
+    0 calc(var(--bw) * -1) 0 0 var(--bc),
+    0 var(--bw) 0 0 var(--bc),
+    calc(var(--bw) * -1) 0 0 0 var(--bc),
+    var(--bw) 0 0 0 var(--bc);
+  margin: var(--bw);         /* shadows draw outside; keep them in bounds */
+}
+.pbox.thick { --bw: 4px; }
+
+/* Dotted pixel divider, like the pink dashes under the status bar */
+.dots {
+  height: 2px; flex: none;
+  background: repeating-linear-gradient(90deg, var(--dot) 0 4px, transparent 4px 8px);
+}
+.dots.v {
+  width: 2px; height: auto;
+  background: repeating-linear-gradient(180deg, var(--dot) 0 4px, transparent 4px 8px);
+}
+
+/* Buttons: pixel box that "presses" 2px down */
+.pbtn {
+  --bw: 2px; --bc: var(--edge);
+  border: 0; padding: 3px 8px; margin: 2px;
+  background: var(--panel); color: var(--text);
+  box-shadow:
+    0 -2px 0 0 var(--bc), 0 2px 0 0 var(--bc), -2px 0 0 0 var(--bc), 2px 0 0 0 var(--bc),
+    0 4px 0 0 var(--line);   /* hard 2px drop "lip" under the button */
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  white-space: nowrap;
+}
+.pbtn:hover { background: var(--a2); color: var(--line); }
+.pbtn:active, .pbtn[aria-pressed="true"] {
+  transform: translateY(2px);
+  box-shadow: 0 -2px 0 0 var(--bc), 0 2px 0 0 var(--bc), -2px 0 0 0 var(--bc), 2px 0 0 0 var(--bc);
+}
+.pbtn[aria-pressed="true"] { background: var(--a1); color: var(--line); }
+.pbtn:disabled { opacity: .5; cursor: default; transform: none; }
+.pbtn.small { padding: 1px 6px; font-size: 13px; }
+.pbtn.accent { background: var(--a3); color: var(--line); }
+
+/* Segmented control (track / hours / light-dark) */
+.seg { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+
+/* Inputs */
+.pinput {
+  border: 0; background: var(--panel); color: var(--text); padding: 5px 8px; margin: 2px;
+  box-shadow: 0 -2px 0 0 var(--edge), 0 2px 0 0 var(--edge), -2px 0 0 0 var(--edge), 2px 0 0 0 var(--edge);
+  user-select: text; min-width: 0;
+}
+.pinput:focus { box-shadow: 0 -2px 0 0 var(--a3), 0 2px 0 0 var(--a3), -2px 0 0 0 var(--a3), 2px 0 0 0 var(--a3); }
+.pinput::placeholder { color: var(--muted); }
+
+/* Pixel range slider */
+input.prange { -webkit-appearance: none; appearance: none; background: transparent; height: 18px; margin: 0; }
+input.prange::-webkit-slider-runnable-track { height: 6px; background: var(--a1); border: 2px solid var(--edge); }
+input.prange::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 12px; height: 16px; margin-top: -7px;
+  background: var(--a3); border: 2px solid var(--line);
+}
+
+/* Pixel toggle switch: a 2-cell box with a sliding square */
+.ptoggle {
+  width: 36px; height: 18px; border: 2px solid var(--edge); background: var(--bg);
+  position: relative; padding: 0; flex: none;
+}
+.ptoggle::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 10px;
+  background: var(--muted); transition: left .15s steps(3);
+}
+.ptoggle[aria-checked="true"] { background: var(--a2); }
+.ptoggle[aria-checked="true"]::after { left: 18px; background: var(--line); }
+
+/* Progress bar made of pixel cells */
+.pbar { height: 10px; border: 2px solid var(--edge); background: var(--bg); position: relative; }
+.pbar > i {
+  position: absolute; inset: 0 auto 0 0; display: block;
+  /* 4px stripes = visible "cells" */
+  background: repeating-linear-gradient(90deg, var(--done) 0 4px, color-mix(in srgb, var(--done) 75%, var(--panel)) 4px 6px);
+  transition: width .3s steps(6);
+}
+
+/* Little tags (Both / SDE / PDF) */
+.tag { font-family: var(--font-label); font-size: 8px; padding: 2px 4px; background: var(--a1); color: var(--line); white-space: nowrap; }
+.tag.t-sde { background: var(--a2); }
+.tag.t-top { background: var(--a3); }
+.tag.t-pdf { background: var(--panel); outline: 1px solid var(--edge); color: var(--text); }
+
+/* Twinkle + drift animations (stepped, sprite-like) */
+@keyframes twinkle { 0%, 60% { opacity: 1; } 70%, 90% { opacity: .2; } }
+@keyframes drift { from { transform: translateX(0); } to { transform: translateX(24px); } }
+@keyframes rain { from { transform: translateY(-110px); } to { transform: translateY(130px); } }
+@keyframes floatz { 0% { transform: translate(0, 0); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(8px, -16px); opacity: 0; } }
+@keyframes pop { 0% { transform: translateY(4px) scale(.6); } 50% { transform: translateY(-4px) scale(1.1); } 100% { transform: translateY(-8px); } }

@@ -1,0 +1,31 @@
+/* Shared view pieces. Per-tab styles get appended as each stage lands. */
+
+.vhead {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-bottom: 10px;
+}
+.vhead h2 { font-family: var(--font-label); font-size: 13px; }
+
+.card { padding: 10px; margin: 2px 2px 14px; }
+.card h3 { font-family: var(--font-label); font-size: 10px; color: var(--muted); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+
+.row { display: flex; align-items: center; gap: 10px; min-height: 30px; }
+.row + .row { margin-top: 6px; }
+.row > .grow { flex: 1; min-width: 0; }
+
+.placeholder { text-align: center; padding: 24px 10px; display: grid; gap: 10px; justify-items: center; }
+.placeholder p { color: var(--muted); }
+
+/* ---------- settings ---------- */
+.themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+.tcard {
+  border: 0; padding: 6px; margin: 2px; text-align: left; display: grid; gap: 6px;
+  background: var(--panel); color: var(--text); font-size: 12px;
+  box-shadow: 0 -2px 0 0 var(--edge), 0 2px 0 0 var(--edge), -2px 0 0 0 var(--edge), 2px 0 0 0 var(--edge);
+}
+.tcard.active { box-shadow: 0 -4px 0 0 var(--a3), 0 4px 0 0 var(--a3), -4px 0 0 0 var(--a3), 4px 0 0 0 var(--a3); }
+.tcard .sw { display: flex; height: 14px; border: 2px solid #0003; }
+.tcard .sw i { flex: 1; }
+.colorpick { width: 36px; height: 24px; padding: 0; border: 2px solid var(--edge); background: none; }
+.colorpick::-webkit-color-swatch-wrapper { padding: 2px; }
+.colorpick::-webkit-color-swatch { border: 0; }

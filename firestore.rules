@@ -1,0 +1,87 @@
+rules_version = '2';
+
+// ByteBun security rules.
+// The app's code can't be trusted (anyone can unpack the .exe), so EVERY
+// permission is decided here, on Google's servers.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+
+    // Signed in, email verified, and on the guest list.
+    // The guest list is the `allowed` collection: one empty doc per email,
+    // with the email as the doc ID (created by hand in the Firebase console).
+    // Keeping it in the database instead of here means no emails in the repo.
+    // email_verified stops someone registering a stranger's address and
+    // getting in before the real owner signs up.
+    function allowed() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/allowed/$(request.auth.token.email));
+    }
+
+    // An allowed user acting on their OWN tree.
+    function isMe(uid) {
+      return allowed() && request.auth.uid == uid;
+    }
+
+    // ---------- users/{uid} ----------
+    // Both people may read both profiles (needed for the Buddy tab);
+    // only the owner may write theirs. No deletes: nothing in the app needs one.
+    match /users/{uid} {
+      allow read: if allowed();
+      allow create, update: if isMe(uid)
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 30;
+      allow delete: if false;
+
+      // Progress: a single doc "main" per user. Readable by both, writable by owner.
+      match /progress/{docId} {
+        allow read: if allowed();
+        allow write: if isMe(uid) && docId == 'main';
+      }
+
+      // Activity feed events. Owner creates them and deletes old ones
+      // (to keep ~50); events are never edited after the fact.
+      match /activity/{eventId} {
+        allow read: if allowed();
+        allow create: if isMe(uid)
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 200;
+        allow delete: if isMe(uid);
+        allow update: if false;
+      }
+    }
+
+    // ---------- chats/main/messages/{id} ----------
+    // One shared chat. Anyone allowed can read. A message can only be created
+    // under your own uid, with a 1–500 char text, a known type, exactly the
+    // expected fields, and the server's clock as createdAt (no fake timestamps).
+    // Messages are immutable: no edits or deletes by anyone.
+    match /chats/{chatId}/messages/{msgId} {
+      allow read: if allowed() && chatId == 'main';
+      allow create: if allowed() && chatId == 'main'
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'text', 'type', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 30
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 500
+        && request.resource.data.type in ['text', 'nudge', 'progress']
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // ---------- allowed/{email} ----------
+    // The guest list itself: nobody can read or change it from the app.
+    // Only the console (admin) can edit it. The rules above can still
+    // check it with exists(), because rules bypass these permissions.
+    match /allowed/{email} {
+      allow read, write: if false;
+    }
+
+    // Anything not matched above is denied by default.
+  }
+}

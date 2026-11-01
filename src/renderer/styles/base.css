@@ -1,0 +1,42 @@
+/* Reset + typography. Colours come from ui/themes.js (CSS variables on :root). */
+:root {
+  --font: "Pixelify Sans", Consolas, monospace;      /* body text: has lowercase, readable */
+  --font-label: "Silkscreen", "Pixelify Sans", monospace; /* tiny caps labels, status bar */
+  --u: 2px;                                          /* one "pixel" of the UI grid */
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--frame);
+  color: var(--text);
+  font: 15px/1.35 var(--font);
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: none;      /* macOS: keep pixel fonts sharp */
+  image-rendering: pixelated;
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+p { margin: 0; }
+h1, h2, h3 { margin: 0; font-weight: 400; }
+a { color: inherit; }
+svg.px { display: block; flex: none; }
+svg.glyph { display: block; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.label { font-family: var(--font-label); font-size: 10px; letter-spacing: 0; text-transform: uppercase; }
+.muted { color: var(--muted); }
+.selectable { user-select: text; }
+
+/* Pixel scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--a1); border: 2px solid var(--edge); }
+::-webkit-scrollbar-button { display: none; }
+
+:focus { outline: none; }
+:focus-visible { outline: 2px dashed var(--a3); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

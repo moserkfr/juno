@@ -1,0 +1,181 @@
+/* ---------------------------------------------------------------
+   The handheld "device": bezel -> title bar -> screen
+   screen = status bar / dots / scene / dots / view (scrolls) / nav
+   --------------------------------------------------------------- */
+
+.device {
+  height: 100vh; display: flex; flex-direction: column;
+  background: var(--frame);
+  padding: 0 4px 4px;
+}
+
+/* Title bar = drag region. Buttons opt out with no-drag. */
+.titlebar {
+  height: 26px; flex: none; display: flex; align-items: center; gap: 6px;
+  padding: 0 2px 0 4px;
+  color: var(--frame-in);
+  -webkit-app-region: drag;
+}
+.titlebar .brand { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-family: var(--font-label); font-size: 10px; }
+.titlebar .brand svg { width: 16px; height: 16px; }
+.tbtn {
+  -webkit-app-region: no-drag;
+  width: 20px; height: 20px; padding: 0; border: 2px solid var(--frame-in);
+  background: transparent; color: var(--frame-in);
+  display: grid; place-items: center;
+}
+.tbtn:hover { background: var(--frame-in); color: var(--frame); }
+.tbtn.on { background: var(--frame-in); color: var(--frame); }
+.tbtn.close:hover { background: var(--a3); color: var(--line); border-color: var(--a3); }
+
+.screen {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  background: var(--bg);
+  border: 4px solid var(--frame-in);         /* inner light strip, like the reference bezel */
+  outline: 2px solid var(--line); outline-offset: -2px;
+  position: relative;
+}
+
+/* ---------- status bar ---------- */
+.status {
+  flex: none; display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px 5px; font-family: var(--font-label); font-size: 12px; color: var(--text);
+}
+.status .lv { display: flex; align-items: center; gap: 4px; }
+.status .clock { flex: 1; text-align: center; white-space: nowrap; }
+.battery { display: flex; align-items: center; }
+.battery .cells { display: flex; gap: 2px; padding: 2px; border: 2px solid var(--line); background: var(--panel); }
+.battery .cells i { width: 5px; height: 8px; background: var(--bg); }
+.battery .cells i.on { background: var(--done); }
+.battery .nub { width: 3px; height: 6px; background: var(--line); }
+.battery.low .cells i.on { background: var(--a3); }
+
+/* ---------- scene ---------- */
+.scene {
+  flex: none; height: 124px; position: relative; overflow: hidden;
+  background: var(--sky);
+}
+[data-dark="1"] .scene {
+  /* dithered checkerboard sky, like the night reference */
+  background:
+    conic-gradient(var(--bg) 25%, transparent 0 50%, var(--bg) 0 75%, transparent 0) 0 0 / 4px 4px,
+    var(--sky);
+}
+.scene .deco { position: absolute; }
+.scene .cloud { animation: drift 8s steps(12) infinite alternate; }
+.scene .sparkle { animation: twinkle 2.4s steps(1) infinite; }
+.scene .ground {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 14px; background: var(--grass);
+  border-top: 2px solid var(--grass-dark);
+}
+.scene .ground::before { /* tufts along the top edge */
+  content: ""; position: absolute; left: 0; right: 0; top: -4px; height: 2px;
+  background: repeating-linear-gradient(90deg, var(--grass-dark) 0 2px, transparent 2px 14px);
+}
+.scene .rainlayer { position: absolute; inset: 0; pointer-events: none; display: none; }
+[data-rain="1"] .scene .rainlayer { display: block; }
+.rainlayer i {
+  position: absolute; top: 0; width: 2px; height: 10px; background: var(--a2); opacity: .7;
+  animation: rain 1.1s steps(10) infinite;
+}
+
+.mascot { position: absolute; left: 10px; bottom: 6px; width: 64px; height: 56px; }
+.mascot-sprite { position: absolute; left: 0; bottom: 0; }
+.mascot-sprite svg { display: block; margin-bottom: -8px; } /* sprite has empty bottom rows */
+.mascot-fx { position: absolute; left: 44px; top: -14px; color: var(--text); font-family: var(--font-label); font-size: 10px; }
+.mascot-fx .heart { animation: pop .6s steps(4) forwards; }
+.mascot-fx span { position: absolute; animation: floatz 2.4s steps(8) infinite; }
+.mascot-fx span:nth-child(2) { left: 6px; top: -6px; animation-delay: .8s; }
+.mascot-fx span:nth-child(3) { left: 12px; top: -12px; animation-delay: 1.6s; font-size: 12px; }
+
+/* Dialogue box: double pixel border with sparkle corners */
+.dialogue {
+  position: absolute; left: 86px; right: 10px; bottom: 20px; top: 40px;
+  padding: 6px 22px 6px 10px; cursor: pointer;
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  --bw: 2px;
+}
+.dialogue::before { /* inner second border */
+  content: ""; position: absolute; inset: 3px; border: 2px solid var(--a1); pointer-events: none;
+}
+.dialogue .who { font-family: var(--font-label); font-size: 9px; color: var(--muted); }
+.dialogue .say {
+  font-size: 14px; line-height: 1.25; color: var(--text);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.dialogue .hrt { position: absolute; right: 6px; bottom: 6px; }
+.dialogue .sp { position: absolute; }
+.dialogue .sp.tl { left: -3px; top: -3px; }
+.dialogue .sp.br { right: -3px; bottom: -3px; }
+.dialogue:hover::before { border-color: var(--a3); }
+
+/* ---------- main view ---------- */
+.view {
+  flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  padding: 10px 10px 14px;
+}
+
+/* ---------- bottom nav ---------- */
+.nav {
+  flex: none; display: flex; align-items: stretch; justify-content: space-between;
+  padding: 6px 6px 4px; gap: 2px;
+  border-top: 2px solid var(--edge);
+  background: var(--bg);
+}
+.nav .dots.v { margin: 8px 0 18px; }
+.ntile {
+  flex: 1; border: 0; background: none; padding: 0; color: var(--text);
+  display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative;
+}
+.ntile .ico {
+  width: 46px; height: 42px; display: grid; place-items: center;
+  background: var(--tile); margin: 2px;
+  box-shadow: 0 -2px 0 0 var(--edge), 0 2px 0 0 var(--edge), -2px 0 0 0 var(--edge), 2px 0 0 0 var(--edge), 0 4px 0 0 var(--line);
+}
+.ntile:nth-of-type(1) { --tile: var(--a2); }
+.ntile:nth-of-type(2) { --tile: var(--a3); }
+.ntile:nth-of-type(3) { --tile: var(--a1); }
+.ntile:nth-of-type(4) { --tile: var(--a2); }
+.ntile:nth-of-type(5) { --tile: var(--a1); }
+.ntile .lbl { font-family: var(--font-label); font-size: 9px; }
+.ntile:hover .ico { transform: translateY(-2px); }
+.ntile.active .ico {
+  transform: translateY(2px);
+  box-shadow: 0 -2px 0 0 var(--line), 0 2px 0 0 var(--line), -2px 0 0 0 var(--line), 2px 0 0 0 var(--line),
+              inset 0 0 0 2px var(--panel);
+}
+.ntile.active .lbl { color: var(--line); background: var(--a3); padding: 0 3px; }
+[data-dark="1"] .ntile.active .lbl { color: var(--line); }
+.badge {
+  position: absolute; top: -2px; right: calc(50% - 30px); min-width: 16px; height: 14px; padding: 0 3px;
+  background: var(--a3); color: var(--line); border: 2px solid var(--line);
+  font-family: var(--font-label); font-size: 8px; line-height: 10px; text-align: center;
+}
+
+/* ---------- toasts (errors / info) ---------- */
+.toasts { position: absolute; left: 10px; right: 10px; top: 34px; z-index: 20; display: grid; gap: 8px; pointer-events: none; }
+.toast {
+  pointer-events: auto; display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px;
+  font-size: 13px; --bc: var(--line);
+}
+.toast.error { background: var(--a3); color: var(--line); }
+.toast.info { background: var(--a2); color: var(--line); }
+.toast.warn { background: var(--review); color: var(--line); }
+.toast b { font-family: var(--font-label); font-size: 9px; display: block; }
+.toast .x { margin-left: auto; background: none; border: 0; padding: 2px; color: inherit; }
+
+/* Persistent offline strip */
+.offline {
+  display: none; flex: none; text-align: center; padding: 2px; font-family: var(--font-label); font-size: 9px;
+  background: repeating-linear-gradient(90deg, var(--review) 0 8px, color-mix(in srgb, var(--review) 70%, var(--panel)) 8px 16px);
+  color: var(--line);
+}
+.offline.on { display: block; }
+
+/* Short windows: shrink the scene so the list keeps room */
+@media (max-height: 580px) {
+  .scene { height: 84px; }
+  .dialogue { top: 22px; bottom: 18px; }
+  .dialogue .say { -webkit-line-clamp: 1; }
+}

@@ -1,18 +1,11 @@
-/* Stage 1 placeholder styles — replaced by the pixel theme in stage 2. */
-* { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
-body { background: #fff7d9; color: #5b3f8c; font: 14px/1.4 Consolas, monospace; overflow: hidden; }
+/* Entry stylesheet: esbuild inlines these @imports and copies the font files
+   into dist/assets, so fonts are bundled locally (no CDN at runtime). */
+@import "@fontsource/pixelify-sans/latin-400.css";
+@import "@fontsource/pixelify-sans/latin-700.css";
+@import "@fontsource/pixelify-sans/latin-ext-400.css";
+@import "@fontsource/silkscreen/latin-400.css";
 
-.titlebar {
-  display: flex; align-items: center; gap: 4px; height: 32px; padding: 0 6px;
-  background: #b79ce0; border-bottom: 4px solid #5b3f8c;
-  -webkit-app-region: drag;   /* drag the frameless window by this bar */
-  user-select: none;
-}
-.titlebar .title { flex: 1; font-weight: bold; }
-.titlebar button { -webkit-app-region: no-drag; } /* buttons must stay clickable */
-
-button { font: inherit; color: inherit; background: #fff7d9; border: 2px solid #5b3f8c; padding: 2px 8px; cursor: pointer; }
-button:hover { background: #9fe0c0; }
-.body { padding: 12px; display: grid; gap: 10px; }
-pre { margin: 0; white-space: pre-wrap; }
+@import "./base.css";
+@import "./pixel.css";
+@import "./shell.css";
+@import "./views.css";

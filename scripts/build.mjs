@@ -26,7 +26,7 @@ const options = {
   bundle: true,
   format: "iife",
   target: "chrome130",          // Electron 33's Chromium
-  loader: { ".woff2": "file", ".png": "file" },
+  loader: { ".woff2": "file", ".woff": "file", ".png": "file" },
   assetNames: "assets/[name]",
   sourcemap: !prod,
   minify: prod,
