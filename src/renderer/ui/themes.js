@@ -16,7 +16,7 @@ export const PRESETS = {
     name: "Witch Cream", dark: false,
     vars: {
       bg: "#fff7d9", sky: "#fff7d9", panel: "#fffdf0", line: "#5b3f8c", edge: "#5b3f8c",
-      text: "#4a3478", muted: "#8a72b8", a1: "#c9b2f0", a2: "#a6e6c8", a3: "#f6a3c4",
+      text: "#4a3478", muted: "#6b52a0", a1: "#c9b2f0", a2: "#a6e6c8", a3: "#f6a3c4",
       frame: "#5b3f8c", "frame-in": "#fff7d9", mascot: "#ffffff",
       cloud: "#d9c8f5", "cloud-line": "#b79ce0", grass: "#bfe9b0", "grass-dark": "#5aa47a",
       dot: "#f28bb0", done: "#4f9e70", review: "#e0952a",
@@ -36,7 +36,7 @@ export const PRESETS = {
     name: "Matcha Latte", dark: false,
     vars: {
       bg: "#eef3df", sky: "#e6efd4", panel: "#fbfdf4", line: "#2f4a2f", edge: "#2f4a2f",
-      text: "#2f4a2f", muted: "#6d8a5f", a1: "#b9d99a", a2: "#e8d7a8", a3: "#f3b6a0",
+      text: "#2f4a2f", muted: "#536f45", a1: "#b9d99a", a2: "#e8d7a8", a3: "#f3b6a0",
       frame: "#2f4a2f", "frame-in": "#eef3df", mascot: "#fffef6",
       cloud: "#ffffff", "cloud-line": "#9fbf87", grass: "#a8d48a", "grass-dark": "#3f7a3f",
       dot: "#8fbf6f", done: "#3f7a3f", review: "#c7782f",
@@ -46,7 +46,7 @@ export const PRESETS = {
     name: "Peach Soda", dark: false,
     vars: {
       bg: "#ffe9dc", sky: "#ffe2d1", panel: "#fff7f1", line: "#1f5c5c", edge: "#1f5c5c",
-      text: "#1f4f4f", muted: "#5f8f8a", a1: "#ffb59a", a2: "#8fd6cc", a3: "#ff8a95",
+      text: "#1f4f4f", muted: "#3f6e69", a1: "#ffb59a", a2: "#8fd6cc", a3: "#ff8a95",
       frame: "#1f5c5c", "frame-in": "#ffe9dc", mascot: "#fffaf5",
       cloud: "#ffffff", "cloud-line": "#ffb59a", grass: "#9fdcb8", "grass-dark": "#2f7f6f",
       dot: "#ff8a95", done: "#2f7f6f", review: "#d9622f",
@@ -56,7 +56,7 @@ export const PRESETS = {
     name: "Pocket Green", dark: false,
     vars: {
       bg: "#9bbc0f", sky: "#9bbc0f", panel: "#8bac0f", line: "#0f380f", edge: "#0f380f",
-      text: "#0f380f", muted: "#306230", a1: "#8bac0f", a2: "#8bac0f", a3: "#306230",
+      text: "#0f380f", muted: "#0f380f", a1: "#8bac0f", a2: "#8bac0f", a3: "#306230",
       frame: "#306230", "frame-in": "#9bbc0f", mascot: "#9bbc0f",
       cloud: "#8bac0f", "cloud-line": "#306230", grass: "#8bac0f", "grass-dark": "#0f380f",
       dot: "#306230", done: "#0f380f", review: "#306230",
@@ -91,7 +91,7 @@ function customVars(accent, mode) {
   }
   return {
     bg: ok(0.97, 0.03), sky: ok(0.96, 0.035), panel: ok(0.99, 0.015), line: ok(0.33, 0.1), edge: ok(0.33, 0.1),
-    text: ok(0.3, 0.09), muted: ok(0.55, 0.08), a1: ok(0.84, 0.09), a2: ok(0.87, 0.08, "calc(h + 120)"), a3: ok(0.82, 0.11, "calc(h - 60)"),
+    text: ok(0.3, 0.09), muted: ok(0.47, 0.08), a1: ok(0.84, 0.09), a2: ok(0.87, 0.08, "calc(h + 120)"), a3: ok(0.82, 0.11, "calc(h - 60)"),
     frame: ok(0.33, 0.1), "frame-in": ok(0.97, 0.03), mascot: "#ffffff",
     cloud: ok(0.92, 0.05), "cloud-line": ok(0.78, 0.09), grass: ok(0.86, 0.09, "calc(h + 120)"), "grass-dark": ok(0.5, 0.1, "calc(h + 120)"),
     dot: ok(0.72, 0.14, "calc(h - 60)"), done: ok(0.5, 0.12, "calc(h + 120)"), review: "oklch(0.68 0.15 65)",

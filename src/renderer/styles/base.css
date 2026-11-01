@@ -1,7 +1,11 @@
 /* Reset + typography. Colours come from ui/themes.js (CSS variables on :root). */
 :root {
-  --font: "Pixelify Sans", Consolas, monospace;      /* body text: has lowercase, readable */
-  --font-label: "Silkscreen", "Pixelify Sans", monospace; /* tiny caps labels, status bar */
+  /* Readability rules (pixel fonts blur at 125% Windows scaling when tiny):
+     body = Pixelify Sans Medium; small labels = Pixelify SemiBold ("Juno Label");
+     Silkscreen only for BIG display text (status bar, LV, headings, big %). */
+  --font: "Pixelify Sans", Consolas, monospace;
+  --font-label: "Juno Label", "Pixelify Sans", monospace;
+  --font-display: "Silkscreen", "Pixelify Sans", monospace;
   --u: 2px;                                          /* one "pixel" of the UI grid */
 }
 
@@ -10,7 +14,7 @@ html, body { margin: 0; height: 100%; }
 body {
   background: var(--frame);
   color: var(--text);
-  font: 15px/1.35 var(--font);
+  font: 500 16px/1.4 var(--font);
   overflow: hidden;
   user-select: none;
   -webkit-font-smoothing: none;      /* macOS: keep pixel fonts sharp */
@@ -24,7 +28,7 @@ a { color: inherit; }
 svg.px { display: block; flex: none; }
 svg.glyph { display: block; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-.label { font-family: var(--font-label); font-size: 10px; letter-spacing: 0; text-transform: uppercase; }
+.label { font-family: var(--font-label); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
 .muted { color: var(--muted); }
 .selectable { user-select: text; }
 

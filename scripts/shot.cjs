@@ -9,7 +9,7 @@ const fs = require("fs");
 
 const out = process.argv[2] || "shots";
 const view = process.argv[3] || "settings";
-const themes = ["witch", "rainy", "matcha", "peach", "gameboy", "candy", "custom-light", "custom-dark"];
+const themes = process.env.SHOT_THEMES ? process.env.SHOT_THEMES.split(",") : ["witch", "rainy", "matcha", "peach", "gameboy", "candy", "custom-light", "custom-dark"];
 
 const PILL = view === "pill";
 ipcMain.handle("app:getState", () => ({ alwaysOnTop: true, opacity: 1, startOnLogin: true, isCollapsed: PILL }));

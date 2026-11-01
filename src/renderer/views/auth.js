@@ -51,7 +51,7 @@ function formView(el) {
     signup: h("button.pbtn.small", { type: "button", onclick: () => setMode("signup") }, "NEW HERE"),
   };
   const forgot = h("button.pbtn.small", { type: "button", onclick: () => setMode(mode === "forgot" ? "signin" : "forgot") });
-  const hint = h("p.muted", { style: { fontSize: "12px" } });
+  const hint = h("p.muted", { style: { fontSize: "13px" } });
 
   const form = h("form.card.pbox.authform", {
     onsubmit: busy(submit, msg, async () => {

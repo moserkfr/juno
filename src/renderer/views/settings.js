@@ -88,7 +88,7 @@ export const settingsView = {
       h("section.card.pbox", {},
         h("h3", {}, "ACCOUNT"),
         h("div.row", {}, h("span", {}, "Name"), nameIn),
-        h("div.row", {}, h("span.muted.grow.selectable", { style: { fontSize: "13px" } }, user.email),
+        h("div.row", {}, h("span.muted.grow.selectable", { style: { fontSize: "14px" } }, user.email),
           h("button.pbtn.small", { onclick: () => actions.signOut() }, "SIGN OUT"))),
       h("section.card.pbox", {}, h("h3", {}, "CHARACTER"), charPicker.el),
       h("section.card.pbox", {},
@@ -101,7 +101,7 @@ export const settingsView = {
         h("div.row", {}, h("span", {}, "Opacity"), opacity, opLabel),
         aot.row, sol.row,
         h("div.row", {}, h("span.grow", {}, "Desktop notifications"), testBtn, notif.row.lastChild),
-        h("p.muted", { style: { fontSize: "12px", marginTop: "6px" } },
+        h("p.muted", { style: { fontSize: "13px", marginTop: "6px" } },
           "Start on login only applies to the installed app.")),
       h("section.card.pbox", {}, h("h3", {}, "ABOUT"), h("div.row", {}, version, updBtn)),
     );
