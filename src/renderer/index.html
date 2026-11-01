@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!--
+    Content-Security-Policy: the page may only load scripts/styles/fonts that
+    ship with the app. Firebase domains get added to connect-src in the auth stage.
+  -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'">
+  <title>ByteBun</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app"></div>
+  <script src="app.js"></script>
+</body>
+</html>

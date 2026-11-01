@@ -1,0 +1,10 @@
+node_modules/
+dist/
+release/
+firebase.config.js
+.firebase/
+*.log
+
+# style references only — never published or shipped
+aesthetic-*.*
+dsa-placement-checklist.html

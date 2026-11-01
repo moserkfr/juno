@@ -1,0 +1,17 @@
+{
+  "name": "bytebun",
+  "productName": "ByteBun",
+  "version": "0.1.0",
+  "description": "Pixel-art DSA placement checklist widget with a study buddy",
+  "main": "src/main/main.js",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "esbuild": "^0.24.2"
+  }
+}
