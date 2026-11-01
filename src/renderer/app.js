@@ -6,7 +6,7 @@
 import { createStore } from "./core/store.js";
 import { h } from "./core/dom.js";
 import { loadLocalPrefs, saveLocalPrefs } from "./core/prefs.js";
-import { computeProgress, findSub } from "../data/plan.js";
+import { computeProgress, findSub, PLAN } from "../data/plan.js";
 import { flag, unflag, reviewed, isEmpty, startOfDay } from "../data/review.js";
 import { reviewView, dueCount } from "./views/review.js";
 import { listView } from "./views/list.js";
@@ -21,6 +21,8 @@ import { settingsView } from "./views/settings.js";
 import { authView } from "./views/auth.js";
 import { watchAuth, signOut } from "./firebase/auth.js";
 import { createSync } from "./firebase/sync.js";
+import { createBuddyWatch, logActivity } from "./firebase/buddy.js";
+import { buddyView } from "./views/buddy.js";
 
 const api = window.bytebun;
 
@@ -36,6 +38,7 @@ const store = createStore({
   win: {},                 // window state mirrored from the main process
   items: {},               // my progress items (synced with Firestore)
   sync: "saved",           // saving | saved | offline | error
+  people: {},              // everyone's public data (firebase/buddy.js), read-only
   progress: computeProgress({}, prefs.track, prefs.hours),
   dialogue: null,          // { who, text } latest buddy message
   mood: "idle",
@@ -81,6 +84,25 @@ const sync = createSync(store, {
   },
 });
 
+/** Everyone else's data for the BUDDY tab (read-only). */
+const buddies = createBuddyWatch({
+  onPeople: people => store.set({ people }),
+  onError(e) {
+    console.error("buddy", e);
+    toast("CAN'T SEE BUDDY", explainError(e), "error");
+  },
+});
+
+/** Add an event to my activity feed. Failures are reported but never block the UI. */
+function log(event) {
+  const uid = store.get().auth.user?.uid;
+  if (!uid || PREVIEW) return;
+  logActivity(uid, event).catch(e => {
+    // Offline: addDoc is queued by Firestore; only the trim step may fail. Don't nag.
+    if (e.code !== "unavailable") toast("ACTIVITY NOT SAVED", explainError(e), "warn");
+  });
+}
+
 /** Mascot is sleepy until you tick something today. */
 function moodFor(items) {
   const today = startOfDay();
@@ -112,9 +134,15 @@ const actions = {
     const r = setItem(id, (it, now) => ({ ...it, done: !it.done, updatedAt: now }));
     if (!r.after.done) return;
     scene.mascot.celebrate();
-    if (r.progress.lv > r.prev.lv) {
-      const t = findSub(id)?.topic;
-      toast(`LEVEL UP! LV.${String(r.progress.lv).padStart(2, "0")}`, `${t ? t.title : "Topic"} complete!`, "info", 5000);
+    const sub = findSub(id);
+    if (r.progress.lv > r.prev.lv && sub) {
+      toast(`LEVEL UP! LV.${String(r.progress.lv).padStart(2, "0")}`, `${sub.topic.title} complete!`, "info", 5000);
+      log({ type: "topic", key: sub.topic.id, text: `finished ${sub.topic.title}` });
+      // Did that also finish the whole phase (within my track)?
+      const ph = r.progress.phases.find(p => p.id === sub.phase.id);
+      if (ph && ph.total && ph.done === ph.total) {
+        log({ type: "phase", key: ph.id, text: `cleared Phase ${PLAN.indexOf(sub.phase)}: ${ph.name}!` });
+      }
     }
   },
   toggleReview(id) {
@@ -166,7 +194,7 @@ const actions = {
 const VIEWS = {
   list: listView,
   review: reviewView,
-  buddy: placeholder("buddy", "BUDDY", "Your buddy's progress arrives in stage 7."),
+  buddy: buddyView,
   chat: placeholder("chat", "CHAT", "Chat arrives in stage 8."),
   settings: settingsView,
 };
@@ -257,8 +285,8 @@ function onAuth(a) {
   // Leaving: stop syncing and clear this account's data from memory.
   const items = a.status === "ready" ? takeLegacyItems(a.user.uid) : {};
   store.set({ auth: a, items, progress: computeProgress(items, prefs.track, prefs.hours), mood: moodFor(items) });
-  if (a.status === "ready" && !PREVIEW) { sync.start(a.user.uid, items); sync.touch(); }
-  if (a.status !== "ready") sync.stop();
+  if (a.status === "ready" && !PREVIEW) { sync.start(a.user.uid, items); sync.touch(); buddies.start(a.user.uid); }
+  if (a.status !== "ready") { sync.stop(); buddies.stop(); store.set({ people: {} }); }
   if (a.status === "ready" && was !== "ready" && was !== "loading") {
     toast("WELCOME!", `Signed in as ${a.user.displayName}.`, "info");
   }
@@ -278,7 +306,23 @@ if (PREVIEW) {
   sample["ll-8"] = { ...flag({}, Date.now() - 9 * 86_400_000), stage: 1, nextReviewAt: Date.now() - 2 * 86_400_000, note: "forgot the dummy node trick" };
   sample["bigo-4"] = { ...sample["bigo-4"], ...flag({}, Date.now() - 40 * 86_400_000), stage: 3, nextReviewAt: null };
   localStorage.setItem(itemsKey(uid), JSON.stringify(sample));
-  onAuth({ status: "ready", user: { uid, email: "preview@local", displayName: "Preview" } });
+  onAuth({ status: "ready", user: { uid, email: "preview@local", displayName: "Manosh" } });
+  // A fake buddy on a different track, to preview the BUDDY tab.
+  const bItems = {};
+  ["stl", "bigo", "math", "rec", "hash", "basicsort", "msqs"].forEach(t =>
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(i => findSub(`${t}-${i}`) && (bItems[`${t}-${i}`] = { done: true })));
+  bItems["arr-0"] = { done: true }; bItems["arr-1"] = { done: true, review: true };
+  const hr = 3_600_000;
+  store.set({
+    prefs: { ...store.get().prefs, avatar: "manosh" },
+    people: {
+      preview: { uid: "preview", feed: [{ uid: "preview", text: "finished Recursion basics", at: Date.now() - 26 * hr }] },
+      buddy: { uid: "buddy", displayName: "Ruhani", prefs: { track: "ds", hours: 2, avatar: "ruhani" }, lastActive: Date.now() - 2 * 60_000,
+               items: bItems, feed: [
+                 { uid: "buddy", text: "finished Merge sort & quick sort", at: Date.now() - 2 * hr },
+                 { uid: "buddy", text: "cleared Phase 1: Foundations!", at: Date.now() - 30 * hr }] },
+    },
+  });
 } else {
   watchAuth(onAuth);
 }

@@ -139,3 +139,39 @@
 .note { width: calc(100% - 4px); resize: none; font-size: 13px; field-sizing: content; min-height: 28px; max-height: 80px; }
 .rbtns { min-height: 0; flex-wrap: wrap; }
 .small { font-size: 12px; }
+
+/* ---------- BUDDY ---------- */
+.pcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.pcard { padding: 8px; display: grid; gap: 6px; align-content: start; margin: 2px; }
+.pcard.me { --bc: var(--a1); --bw: 4px; margin: 4px; }
+.pcard.waiting { color: var(--muted); }
+.pc-top { display: flex; gap: 8px; align-items: flex-end; }
+.pc-av { flex: none; padding: 4px; background: color-mix(in srgb, var(--a2) 35%, var(--bg)); border: 2px solid var(--edge); }
+.pc-id { display: grid; gap: 2px; min-width: 0; }
+.pc-name { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-id .label { font-size: 8px; color: var(--muted); }
+.pc-lv { font-family: var(--font-label); font-size: 16px; }
+.pc-pct b { font-family: var(--font-label); font-size: 11px; font-weight: 400; }
+.pc-now { font-size: 13px; min-height: 34px; }
+.pc-now .label { font-size: 8px; background: var(--a3); color: var(--line); padding: 0 3px; }
+.pc-foot { min-height: 0; font-size: 12px; }
+.pc-seen { font-family: var(--font-label); font-size: 8px; color: var(--muted); }
+.pc-seen.on { color: var(--done); }
+
+.card h3 .legend { font-size: 8px; padding: 1px 4px; background: var(--a1); color: var(--line); }
+.card h3 .legend.b { background: var(--a2); }
+.phrow { display: grid; grid-template-columns: 1fr; gap: 3px; padding: 6px 0; border-bottom: 2px dotted color-mix(in srgb, var(--edge) 35%, transparent); }
+.phrow:last-child { border-bottom: 0; }
+.phname { font-size: 13px; }
+.phbar { min-height: 0; gap: 6px; }
+.phbar .label { width: 32px; text-align: right; font-size: 8px; }
+.phbar.none { color: var(--muted); font-size: 9px; padding-left: 2px; }
+.phrow .phbar:nth-of-type(1) .pbar > i { background: repeating-linear-gradient(90deg, var(--a1) 0 4px, color-mix(in srgb, var(--a1) 70%, var(--panel)) 4px 6px); }
+.phrow .phbar:nth-of-type(2) .pbar > i { background: repeating-linear-gradient(90deg, var(--a2) 0 4px, color-mix(in srgb, var(--a2) 70%, var(--panel)) 4px 6px); }
+.phrow .pbar { height: 8px; }
+
+.feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.feed li { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.fav { flex: none; width: 20px; display: grid; place-items: center; }
+.fav svg { width: 16px; height: auto; }
+.fago { font-size: 11px; white-space: nowrap; }
