@@ -1,7 +1,7 @@
 /**
  * Renderer entry: builds the handheld shell once, owns the store, and swaps
- * the tab view in the middle. Data layers (auth, Firestore) plug in later
- * by calling store.set(...).
+ * the tab view in the middle. Firebase layers (auth, sync) feed the store via
+ * store.set(...); views change data only through `actions`.
  */
 import { createStore } from "./core/store.js";
 import { h } from "./core/dom.js";
@@ -14,11 +14,12 @@ import { createTitlebar } from "./ui/titlebar.js";
 import { createStatusbar } from "./ui/statusbar.js";
 import { createScene } from "./ui/scene.js";
 import { createNav, TABS } from "./ui/nav.js";
-import { createToasts, toast } from "./ui/toast.js";
+import { createToasts, toast, explainError } from "./ui/toast.js";
 import { placeholder } from "./views/placeholder.js";
 import { settingsView } from "./views/settings.js";
 import { authView } from "./views/auth.js";
-import { watchAuth } from "./firebase/auth.js";
+import { watchAuth, signOut } from "./firebase/auth.js";
+import { createSync } from "./firebase/sync.js";
 
 const api = window.bytebun;
 
@@ -32,7 +33,8 @@ const store = createStore({
   view: "list",
   prefs,
   win: {},                 // window state mirrored from the main process
-  items: {},               // my progress items (filled by sync stage)
+  items: {},               // my progress items (synced with Firestore)
+  sync: "saved",           // saving | saved | offline | error
   progress: computeProgress({}, prefs.track, prefs.hours),
   dialogue: null,          // { who, text } latest buddy message
   mood: "idle",
@@ -40,17 +42,43 @@ const store = createStore({
   online: navigator.onLine,
 });
 
-/* ---------------- my items (local cache; Firestore sync in stage 5) ---------------- */
+/* ---------------- sync ---------------- */
 
+// Stage 4 kept items in localStorage. They're read once, handed to sync for a
+// one-time upload if the account has nothing in Firestore yet, then removed.
+const PREVIEW = location.hash === "#preview";
 const itemsKey = uid => "bytebun.items." + uid;
-function loadItems(uid) {
-  try { return JSON.parse(localStorage.getItem(itemsKey(uid)) || "{}"); } catch { return {}; }
+function takeLegacyItems(uid) {
+  try {
+    const items = JSON.parse(localStorage.getItem(itemsKey(uid)) || "{}");
+    if (!PREVIEW) localStorage.removeItem(itemsKey(uid));
+    return items;
+  } catch { return {}; }
 }
-function saveItems(items) {
-  const uid = store.get().auth.user?.uid;
-  if (!uid) return;
-  try { localStorage.setItem(itemsKey(uid), JSON.stringify(items)); } catch { /* ignore */ }
-}
+
+const sync = createSync(store, {
+  onItems(items) {
+    const { prefs } = store.get();
+    store.set({ items, progress: computeProgress(items, prefs.track, prefs.hours), mood: moodFor(items) });
+  },
+  onPrefs(remote, first) {
+    const s = store.get();
+    // Window prefs aren't part of app prefs; peel them off.
+    const { window: win, opacity, alwaysOnTop, ...prefs } = remote;
+    saveLocalPrefs(prefs);
+    applyTheme(prefs.theme);
+    store.set({ prefs, progress: computeProgress(s.items, prefs.track, prefs.hours) });
+    // Move the window to where this account left it — once per sign-in only,
+    // so our own saves echoing back never yank the window around.
+    if (first) api.applyPrefs({ window: win, opacity, alwaysOnTop });
+  },
+  onStatus: sync => store.set({ sync }),
+  onError(e, what) {
+    console.error("sync", what, e);
+    const title = what === "save" ? "COULDN'T SAVE" : "SYNC PROBLEM";
+    toast(title, explainError(e), "error");
+  },
+});
 
 /** Mascot is sleepy until you tick something today. */
 function moodFor(items) {
@@ -71,7 +99,7 @@ function setItem(id, fn) {
   if (isEmpty(after)) delete items[id]; else items[id] = after;
   const progress = computeProgress(items, s.prefs.track, s.prefs.hours);
   store.set({ items, progress, mood: moodFor(items) });
-  saveItems(items);
+  sync.markItem(id);
   return { before, after, progress, prev: s.progress };
 }
 
@@ -96,10 +124,19 @@ const actions = {
     const next = { ...s.prefs, ...patch };
     saveLocalPrefs(next);
     store.set({ prefs: next, progress: computeProgress(s.items, next.track, next.hours) });
+    sync.markPrefs();
   },
   setTheme(theme) {
     applyTheme(theme);
     actions.setPrefs({ theme });
+  },
+  async signOut() {
+    // Hand any edits from the last 800 ms to Firestore. No await: offline it
+    // would wait for the server forever. setDoc queues the write in the local
+    // cache synchronously, and Firestore keeps it for this account's next sign-in.
+    sync.flush();
+    sync.stop();
+    await signOut();
   },
 };
 
@@ -170,7 +207,17 @@ store.subscribe(render);
 
 /* ---------------- wiring to the main process + OS ---------------- */
 
-api.onState(win => store.set({ win }));
+/**
+ * Window state from the main process. When the user moves/resizes the window
+ * or changes opacity / always-on-top, save it to their account (debounced by
+ * sync). Visibility/focus-only changes don't count.
+ */
+const winKey = w => JSON.stringify([w.expanded, w.collapsed, w.isCollapsed, w.opacity, w.alwaysOnTop]);
+api.onState(win => {
+  const changed = winKey(win) !== winKey(store.get().win);
+  store.set({ win });
+  if (changed && store.get().auth.status === "ready") sync.markPrefs();
+});
 api.getState().then(win => {
   // Collapsed mode UI is built in stage 10; until then always open expanded.
   if (win.isCollapsed) api.setCollapsed(false);
@@ -184,9 +231,13 @@ addEventListener("offline", () => store.set({ online: false }));
 function onAuth(a) {
   const was = store.get().auth.status;
   const { prefs } = store.get();
-  // Load this account's items when entering; clear them when leaving.
-  const items = a.status === "ready" ? loadItems(a.user.uid) : {};
+  // Entering: show any legacy local items instantly, then let sync take over
+  // (Firestore's cache usually delivers the real data within milliseconds).
+  // Leaving: stop syncing and clear this account's data from memory.
+  const items = a.status === "ready" ? takeLegacyItems(a.user.uid) : {};
   store.set({ auth: a, items, progress: computeProgress(items, prefs.track, prefs.hours), mood: moodFor(items) });
+  if (a.status === "ready" && !PREVIEW) { sync.start(a.user.uid, items); sync.touch(); }
+  if (a.status !== "ready") sync.stop();
   if (a.status === "ready" && was !== "ready" && was !== "loading") {
     toast("WELCOME!", `Signed in as ${a.user.displayName}.`, "info");
   }
@@ -196,7 +247,7 @@ function onAuth(a) {
 // Preview mode (index.html#preview, used only by scripts/shot.cjs for screenshots):
 // fake local user + sample progress, no Firebase calls. The real app never
 // loads with this hash, and Firestore data is protected by the rules anyway.
-if (location.hash === "#preview") {
+if (PREVIEW) {
   const uid = "preview";
   const sample = {};
   ["stl", "bigo", "math"].forEach(t => findSub(t + "-0") && [0, 1, 2, 3, 4, 5, 6].forEach(i => findSub(`${t}-${i}`) && (sample[`${t}-${i}`] = { done: true, updatedAt: Date.now() })));
@@ -208,6 +259,12 @@ if (location.hash === "#preview") {
 } else {
   watchAuth(onAuth);
 }
+
+// Quitting from the tray / closing: hand pending edits to Firestore's local
+// queue (synchronous part of flush), so they're sent on next launch at worst.
+addEventListener("beforeunload", () => sync.flush());
+// Hiding to tray is a good moment to save too.
+api.onVisibility(visible => { if (!visible) sync.flush(); });
 
 // Re-check the mascot's mood every 10 min (it gets sleepy after midnight).
 setInterval(() => store.set({ mood: moodFor(store.get().items) }), 10 * 60_000);

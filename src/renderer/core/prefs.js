@@ -8,7 +8,8 @@ import { DEFAULT_THEME } from "../ui/themes.js";
 
 const KEY = "bytebun.prefs";
 
-export const DEFAULT_PREFS = { track: DEFAULT_TRACK, hours: DEFAULT_HOURS, theme: DEFAULT_THEME };
+// avatar: null until the user picks a character ("ruhani" | "manosh" | "bytebun")
+export const DEFAULT_PREFS = { track: DEFAULT_TRACK, hours: DEFAULT_HOURS, theme: DEFAULT_THEME, avatar: null };
 
 /** Fill in missing fields so old/partial saves never crash the UI. */
 export function normalizePrefs(p = {}) {

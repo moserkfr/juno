@@ -10,6 +10,7 @@
  */
 import { h, raw } from "../core/dom.js";
 import { glyph, sparkle } from "../art/sprites.js";
+import { createAvatarPicker } from "../ui/avatarPicker.js";
 import {
   TRACKS, HOURS, schedule, topicStats, subId, subText, subPdf, topicHasPdf, fmtWeeks,
 } from "../../data/plan.js";
@@ -37,13 +38,22 @@ export const listView = {
       h("div.row.controls", {}, h("span.label.clabel", {}, "TRACK"), h("div.seg", {}, trackBtns)),
       h("div.row.controls", {}, h("span.label.clabel", {}, "H/DAY"), h("div.seg", {}, hourBtns)),
     );
+    const syncText = h("span.label.synctext");
+    const SYNC = { saving: "SAVING...", saved: "☁ SAVED", offline: "OFFLINE · QUEUED", error: "! NOT SAVED" };
     const tools = h("div.row.tools", {},
       h("button.pbtn.small", { onclick: () => { scheduleNow().forEach(p => p.topics.forEach(t => open.add(t.id))); rebuild(store.get(), true); } }, "EXPAND ALL"),
       h("button.pbtn.small", { onclick: () => { open.clear(); rebuild(store.get(), true); } }, "COLLAPSE ALL"),
       h("span.grow"),
+      syncText,
       h("button.pbtn.small", { onclick: () => jumpToCurrent() }, "▶ NOW"));
     const body = h("div.phases");
-    el.append(header, tools, body);
+    // One-time prompt until the user picks a character (so a new friend doesn't hunt in SET).
+    const picker = createAvatarPicker(id => actions.setPrefs({ avatar: id }));
+    const whoami = h("section.card.pbox.whoami", {},
+      h("h3", {}, "WHO ARE YOU?"),
+      h("p.muted", {}, "Pick your character. Your buddy will see it."),
+      picker.el);
+    el.append(whoami, header, tools, body);
 
     const scheduleNow = () => { const p = store.get().prefs; return schedule(p.track, p.hours); };
 
@@ -121,7 +131,7 @@ export const listView = {
           h("p.pgoal.muted", {}, phase.goal),
           topics.map(t => topicEl(t, items, s, currentId)))));
       if (keepScroll) el.scrollTop = top;
-      if (autoOpened === "pending") { autoOpened = true; requestAnimationFrame(jumpToCurrent); }
+      if (autoOpened === "pending") { autoOpened = true; requestAnimationFrame(() => { if (store.get().prefs.avatar) jumpToCurrent(); }); }
     }
 
     function jumpToCurrent() {
@@ -135,6 +145,9 @@ export const listView = {
 
     let last = {};
     function update(s) {
+      whoami.style.display = s.prefs.avatar ? "none" : "";
+      syncText.textContent = SYNC[s.sync] || "";
+      syncText.dataset.state = s.sync;
       const p = s.progress;
       pctText.textContent = p.pct + "%";
       countText.textContent = `${p.done}/${p.total} items`;
