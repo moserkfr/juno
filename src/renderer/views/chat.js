@@ -122,15 +122,23 @@ export const chatView = {
           h("span.mtime", {}, m.pending ? "sending..." : time(m.at))));
     }
 
+    // Bubbles only depend on names + characters, not on lastActive/chatReadAt
+    // (which change every few minutes), so compare a small key instead.
+    const looksKey = s => s.prefs.avatar + "|" + Object.values(s.people || {})
+      .map(p => `${p.uid}:${p.displayName}:${p.prefs?.avatar}`).join(",");
+
     let last = {};
     function update(s) {
-      if (s.messages === last.messages && s.people === last.people && s.prefs === last.prefs) return;
+      const looks = looksKey(s);
+      if (s.messages === last.messages && looks === last.looks) return;
       const grew = s.messages.length !== (last.messages?.length ?? -1) ||
                    s.messages.at(-1)?.id !== last.messages?.at(-1)?.id;
       const first = !last.messages;
-      last = { messages: s.messages, people: s.people, prefs: s.prefs };
+      last = { messages: s.messages, looks };
 
-      const stick = first || nearBottom();
+      // Stick to the bottom if you were there, or if you just sent something.
+      const mineNewest = grew && s.messages.at(-1)?.uid === s.auth.user.uid;
+      const stick = first || mineNewest || nearBottom();
       const kids = [];
       let day = "";
       if (!s.messages.length) kids.push(h("p.muted.cempty", {}, "No messages yet. Say hi to your buddy!"));

@@ -10,6 +10,12 @@ const { createTray, refreshTray, setTrayUnread } = require("./tray");
 const { makeIcon } = require("./pixelIcon");
 const { autoUpdater } = require("electron-updater");
 
+// Dev (npm start) gets its own profile. Otherwise it would share the installed
+// app's folder (%APPDATA%\juno == %APPDATA%\Juno on Windows): same settings,
+// same session, and the same single-instance lock, so npm start would silently
+// exit while the installed Juno is running.
+if (!app.isPackaged) app.setPath("userData", app.getPath("userData") + "-dev");
+
 // --- Single instance: a second launch just focuses the existing widget. ---
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -24,6 +30,7 @@ app.setAppUserModelId(app.isPackaged ? "com.juno.app" : process.execPath);
 
 let win = null;
 let quitting = false;
+let lastBlur = 0;   // see toggleVisible()
 
 /* ------------------------------------------------------------------ */
 /*  Window                                                             */
@@ -63,11 +70,10 @@ function createWindow() {
   win.on("close", e => {
     if (!quitting) { e.preventDefault(); win.hide(); refreshTray(); }
   });
-  win.on("show", refreshTray);
+  win.on("show", () => { refreshTray(); send("window:visibility", true); });
   win.on("hide", () => { refreshTray(); send("window:visibility", false); });
-  win.on("show", () => send("window:visibility", true));
   win.on("focus", () => send("window:focus", true));
-  win.on("blur", () => send("window:focus", false));
+  win.on("blur", () => { lastBlur = Date.now(); send("window:focus", false); });
   win.on("moved", () => { ws.captureBounds(win); pushState(); });
   win.on("resized", () => { ws.captureBounds(win); pushState(); });
 
@@ -101,8 +107,14 @@ function showWindow() {
   win.focus();
 }
 
+/**
+ * Tray click. On Windows, clicking the tray takes focus away from the window
+ * BEFORE this runs, so isFocused() is always false here. Treat "lost focus in
+ * the last 300 ms" as focused, i.e. the user was just looking at it.
+ */
 function toggleVisible() {
-  if (win.isVisible() && win.isFocused()) win.hide();
+  const wasFocused = win.isFocused() || Date.now() - lastBlur < 300;
+  if (win.isVisible() && !win.isMinimized() && wasFocused) win.hide();
   else showWindow();
 }
 
@@ -276,7 +288,11 @@ ipcMain.handle("app:updateReady", () => updateReady);
 /* ------------------------------------------------------------------ */
 
 app.on("second-instance", showWindow);
-app.on("before-quit", () => { quitting = true; if (win) ws.captureBounds(win); });
+app.on("before-quit", () => {
+  quitting = true;
+  if (win) ws.captureBounds(win);
+  ws.saveNow(); // the normal save is debounced and would be lost on exit
+});
 
 app.whenReady().then(() => {
   createWindow();
@@ -287,8 +303,10 @@ app.whenReady().then(() => {
     updateReady: () => updateReady, restartToUpdate,
   });
   setupUpdates();
-  // First launch of the installed app: start on login is on by default.
-  if (ws.isFirstRun()) setStartOnLogin(true);
+  // Make Windows match the saved setting on every launch (default: on).
+  // Not just on first run: a settings file can already exist (e.g. after a
+  // reinstall), and then the login item would never be registered.
+  if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: !!ws.get().startOnLogin });
 });
 
 // Keep running in the tray when the window is hidden/closed.

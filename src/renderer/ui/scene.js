@@ -66,14 +66,19 @@ export function createScene({ onDialogueClick }) {
   setInterval(updateSky, 10 * 60_000);
 
   /** s.dialogue = { who, text, avatar? } | null */
+  let lastKey = "";
   function update(s) {
     const d = s.dialogue;
+    mascot.setMood(s.mood || "idle");
+    // update() runs on every state change; only touch the DOM when the line changed.
+    const key = d ? `${d.who}|${d.avatar}|${d.text}` : "daily|" + lineOfTheDay();
+    if (key === lastKey && who.childNodes.length) return;
+    lastKey = key;
     // Speaker portrait (buddy's character) + name. Name is a text node, never HTML.
     who.replaceChildren(
       ...(d && d.avatar !== undefined ? [raw(avatarSVG(d.avatar, 1, "head"))] : []),
       d ? d.who : "JUNO SAYS");
     say.textContent = d ? d.text : lineOfTheDay();
-    mascot.setMood(s.mood || "idle");
   }
 
   return { el, update, mascot };

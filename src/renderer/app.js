@@ -40,6 +40,7 @@ const store = createStore({
   prefs,
   win: {},                 // window state mirrored from the main process
   items: {},               // my progress items (synced with Firestore)
+  itemsLoaded: false,      // true once Firestore (or its cache) delivered my items
   sync: "saved",           // saving | saved | offline | error
   people: {},              // everyone's public data (firebase/buddy.js), read-only
   messages: [],            // last 200 chat messages, oldest first
@@ -48,30 +49,28 @@ const store = createStore({
   winFocused: document.hasFocus(),
   update: null,            // version string once an update is downloaded
   progress: computeProgress({}, prefs.track, prefs.hours),
-  dialogue: null,          // { who, text } latest buddy message
   mood: "idle",
-  unread: 0,
   online: navigator.onLine,
 });
 
 /* ---------------- sync ---------------- */
 
-// Stage 4 kept items in localStorage. They're read once, handed to sync for a
-// one-time upload if the account has nothing in Firestore yet, then removed.
+// Stage 4 kept items in localStorage. They're handed to sync for a one-time
+// upload if the account has nothing in Firestore yet, and deleted only once
+// sync has dealt with them (uploaded, or found the account already has data).
 const PREVIEW = location.hash === "#preview";
 const itemsKey = uid => "juno.items." + uid;
-function takeLegacyItems(uid) {
-  try {
-    const items = JSON.parse(localStorage.getItem(itemsKey(uid)) || "{}");
-    if (!PREVIEW) localStorage.removeItem(itemsKey(uid));
-    return items;
-  } catch { return {}; }
+function readLegacyItems(uid) {
+  try { return JSON.parse(localStorage.getItem(itemsKey(uid)) || "{}"); } catch { return {}; }
+}
+function dropLegacyItems(uid) {
+  try { localStorage.removeItem(itemsKey(uid)); } catch { /* ignore */ }
 }
 
 const sync = createSync(store, {
   onItems(items) {
     const { prefs } = store.get();
-    store.set({ items, progress: computeProgress(items, prefs.track, prefs.hours), mood: moodFor(items) });
+    store.set({ items, itemsLoaded: true, progress: computeProgress(items, prefs.track, prefs.hours), mood: moodFor(items) });
   },
   onPrefs(remote, first) {
     const s = store.get();
@@ -84,6 +83,7 @@ const sync = createSync(store, {
     // so our own saves echoing back never yank the window around.
     if (first) api.applyPrefs({ window: win, opacity, alwaysOnTop });
   },
+  onLegacyDone: uid => dropLegacyItems(uid),
   onStatus: sync => store.set({ sync }),
   onError(e, what) {
     console.error("sync", what, e);
@@ -214,7 +214,7 @@ function onUpdate(version) {
   toast("UPDATE READY", `Juno v${version} installs when you restart (SET → ABOUT, or the tray menu).`, "info", 0);
 }
 api.onUpdate(onUpdate);
-api.updateReady().then(onUpdate);
+api.updateReady().then(onUpdate).catch(() => { /* no updater (dev) */ });
 
 // Clicking a notification asks us to open a tab.
 api.onNavigate(view => { if (store.get().auth.status === "ready") actions.go(view); });
@@ -310,6 +310,8 @@ const actions = {
     }
   },
   toast: (...a) => toast(...a),
+  /** Auth status changed outside onAuthStateChanged (e.g. "I'M VERIFIED"). */
+  enter: a => onAuth(a),
   notifyEnabled: () => notifyEnabled(),
   setNotify(on) { setNotifyEnabled(on); store.set({}); },
   testNotify: () => api.notify("Juno", "Notifications work! ♥"),
@@ -426,10 +428,17 @@ function onAuth(a) {
   // Entering: show any legacy local items instantly, then let sync take over
   // (Firestore's cache usually delivers the real data within milliseconds).
   // Leaving: stop syncing and clear this account's data from memory.
-  const items = a.status === "ready" ? takeLegacyItems(a.user.uid) : {};
+  const items = a.status === "ready" ? readLegacyItems(a.user.uid) : {};
   store.set({ auth: a, items, progress: computeProgress(items, prefs.track, prefs.hours), mood: moodFor(items) });
   if (a.status === "ready" && !PREVIEW) { sync.start(a.user.uid, items); sync.touch(); buddies.start(a.user.uid); startChat(); }
-  if (a.status !== "ready") { sync.stop(); buddies.stop(); stopChat(); store.set({ people: {}, messages: [], chatReadAt: 0 }); }
+  if (a.status !== "ready") {
+    sync.stop(); buddies.stop(); stopChat();
+    // Keep the theme (it's just this device's look), but forget whose character
+    // this was, so a different account signing in here doesn't inherit it.
+    const p = { ...store.get().prefs, avatar: null };
+    saveLocalPrefs(p);
+    store.set({ people: {}, messages: [], chatReadAt: 0, prefs: p, itemsLoaded: false });
+  }
   if (a.status === "ready" && was !== "ready" && was !== "loading") {
     toast("WELCOME!", `Signed in as ${a.user.displayName}.`, "info");
   }
@@ -450,6 +459,7 @@ if (PREVIEW) {
   sample["bigo-4"] = { ...sample["bigo-4"], ...flag({}, Date.now() - 40 * 86_400_000), stage: 3, nextReviewAt: null };
   localStorage.setItem(itemsKey(uid), JSON.stringify(sample));
   onAuth({ status: "ready", user: { uid, email: "preview@local", displayName: "Manosh" } });
+  store.set({ itemsLoaded: true });
   // A fake buddy on a different track, to preview the BUDDY tab.
   const bItems = {};
   ["stl", "bigo", "math", "rec", "hash", "basicsort", "msqs"].forEach(t =>

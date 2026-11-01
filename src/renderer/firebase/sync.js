@@ -58,11 +58,17 @@ export function createSync(store, hooks) {
           hooks.onItems(legacy);
           Object.keys(legacy).forEach(id => dirtyItems.add(id));
           legacy = null;
-          schedule();
-        } else hooks.onItems({});
+          // flush() calls setDoc synchronously, which puts the upload in
+          // Firestore's on-disk queue (survives restarts, sent when online).
+          // So the localStorage copy can go right away, even offline.
+          flush();
+          hooks.onLegacyDone?.(uid);
+        } else if (!snap.metadata.fromCache) {
+          hooks.onItems({});
+        }
         return;
       }
-      legacy = null;
+      if (legacy) { legacy = null; hooks.onLegacyDone?.(uid); } // account already has data
       hooks.onItems(snap.data().items || {});
     }, e => hooks.onError(e, "progress")));
 
@@ -110,10 +116,13 @@ export function createSync(store, hooks) {
     const c = w.collapsed || {};
     return {
       ...s.prefs,
-      opacity: w.opacity ?? 1,
-      alwaysOnTop: w.alwaysOnTop ?? true,
-      window: { x: e.x ?? null, y: e.y ?? null, w: e.w ?? null, h: e.h ?? null,
-                cx: c.x ?? null, cy: c.y ?? null, collapsed: !!w.isCollapsed },
+      // Window fields only once the main process has reported them.
+      ...(w.expanded ? {
+        opacity: w.opacity ?? 1,
+        alwaysOnTop: w.alwaysOnTop ?? true,
+        window: { x: e.x ?? null, y: e.y ?? null, w: e.w ?? null, h: e.h ?? null,
+                  cx: c.x ?? null, cy: c.y ?? null, collapsed: !!w.isCollapsed },
+      } : {}),
     };
   }
 
@@ -137,8 +146,13 @@ export function createSync(store, hooks) {
 
     const writes = [setDoc(refs.progress, pdata, { mergeFields: fields })];
     if (prefsChanged) {
-      writes.push(setDoc(refs.user, { prefs: prefsDoc(s), lastActive: serverTimestamp() },
-                         { mergeFields: ["prefs", "lastActive"] }));
+      // One field path per pref (prefs.track, prefs.theme, ...) instead of
+      // replacing the whole prefs map, so fields we don't know yet (e.g. the
+      // window before the main process reported it) keep their saved values.
+      const prefs = prefsDoc(s);
+      writes.push(setDoc(refs.user, { prefs, lastActive: serverTimestamp() }, {
+        mergeFields: [...Object.keys(prefs).map(k => new FieldPath("prefs", k)), "lastActive"],
+      }));
     }
 
     inflight++;

@@ -43,7 +43,6 @@ function isVisible(r) {
 
 let state = null;
 let saveTimer = null;
-let firstRun = false;
 
 function load() {
   const def = defaults();
@@ -51,8 +50,7 @@ function load() {
     const saved = JSON.parse(fs.readFileSync(FILE(), "utf8"));
     state = { ...def, ...saved };
   } catch {
-    state = def;
-    firstRun = true;
+    state = def; // first run or unreadable file: defaults
   }
   sanitize();
   return state;
@@ -70,12 +68,17 @@ function sanitize() {
   state.opacity = Math.min(1, Math.max(0.6, Number(state.opacity) || 1));
 }
 
+/** Write now (used on quit, when a debounced write would never happen). */
+function saveNow() {
+  clearTimeout(saveTimer);
+  if (!state) return;
+  try { fs.writeFileSync(FILE(), JSON.stringify(state, null, 2)); } catch (e) { console.error("window-state save failed", e); }
+}
+
 /** Debounced write: dragging fires dozens of 'moved' events per second. */
 function save() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try { fs.writeFileSync(FILE(), JSON.stringify(state, null, 2)); } catch (e) { console.error("window-state save failed", e); }
-  }, 500);
+  saveTimer = setTimeout(saveNow, 500);
 }
 
 function get() { return state; }
@@ -97,4 +100,4 @@ function boundsFor(mode = state.isCollapsed ? "collapsed" : "expanded") {
   return { x: e.x, y: e.y, width: e.w, height: e.h };
 }
 
-module.exports = { load, get, set, save, sanitize, captureBounds, boundsFor, SIZES, isFirstRun: () => firstRun };
+module.exports = { load, get, set, save, saveNow, sanitize, captureBounds, boundsFor, SIZES };

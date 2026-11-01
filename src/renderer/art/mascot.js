@@ -43,7 +43,8 @@ const FACES = {
   sleepy: paint(BODY, [[9, 3, "eee"], [9, 10, "eee"], [11, 7, "m"], ...CHEEKS]),
 };
 
-const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+// One live MediaQueryList instead of re-querying every frame.
+const motionQuery = matchMedia("(prefers-reduced-motion: reduce)");
 
 export function createMascot(scale = 4) {
   const el = document.createElement("div");
@@ -62,9 +63,12 @@ export function createMascot(scale = 4) {
     sprite.style.transform = `translateY(${dy * scale}px)`;
   }
 
-  function step() {
+  function step(force) {
+    // Two mascots exist (handheld + pill) but only one is ever visible.
+    // offsetParent is null while an ancestor is display:none: skip the work.
+    if (!force && el.offsetParent === null) return;
     tick++;
-    const still = reduceMotion();
+    const still = motionQuery.matches;
     if (Date.now() < happyUntil) {
       const jump = [0, -2, -4, -5, -4, -2, 0, 0][tick % 8];
       draw("happy", still ? 0 : jump);
@@ -82,16 +86,16 @@ export function createMascot(scale = 4) {
   }
 
   const timer = setInterval(step, 280);
-  step();
+  step(true);
 
   return {
     el,
-    setMood(m) { if (m !== mood) { mood = m; step(); } },
+    setMood(m) { if (m !== mood) { mood = m; step(true); } },
     celebrate() {
       happyUntil = Date.now() + 2000;
       tick = 0;
       fx.innerHTML = heart(3); fx.dataset.kind = "heart";
-      step();
+      step(true);
     },
     destroy() { clearInterval(timer); },
   };

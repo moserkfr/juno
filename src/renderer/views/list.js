@@ -122,7 +122,8 @@ export const listView = {
       const top = el.scrollTop;
       const items = s.items || {};
       const currentId = s.progress.currentTopic?.id;
-      if (!autoOpened && currentId) { open.add(currentId); autoOpened = "pending"; }
+      // Wait for real data: before it loads, "current topic" is just topic #1.
+      if (!autoOpened && currentId && s.itemsLoaded) { open.add(currentId); autoOpened = "pending"; }
       body.replaceChildren(...schedule(s.prefs.track, s.prefs.hours).map(({ phase, index, topics, weeks, startWk, endWk }) =>
         h("section.phase", {},
           h("div.phead", {},
@@ -157,9 +158,9 @@ export const listView = {
       trackBtns.forEach((b, i) => b.setAttribute("aria-pressed", String(TRACKS[i].id === s.prefs.track)));
       hourBtns.forEach((b, i) => b.setAttribute("aria-pressed", String(HOURS[i] === s.prefs.hours)));
       // Rebuild the body only if something it shows changed.
-      if (s.items !== last.items || s.prefs.track !== last.track || s.prefs.hours !== last.hours) {
+      if (s.items !== last.items || s.prefs.track !== last.track || s.prefs.hours !== last.hours || s.itemsLoaded !== last.loaded) {
         rebuild(s, true);
-        last = { items: s.items, track: s.prefs.track, hours: s.prefs.hours };
+        last = { items: s.items, track: s.prefs.track, hours: s.prefs.hours, loaded: s.itemsLoaded };
       }
     }
     update(store.get());

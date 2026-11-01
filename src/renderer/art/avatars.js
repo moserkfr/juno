@@ -102,10 +102,19 @@ export const AVATARS = [
   { id: "juno", name: "Juno" },
 ];
 
-/** SVG string for a character. Unknown/unset ids fall back to Juno. */
+/**
+ * SVG string for a character. Unknown/unset ids fall back to Juno.
+ * Memoised: it's a pure function of its arguments and chat renders the same
+ * portrait for every bubble.
+ */
+const memo = new Map();
 export function avatarSVG(id, scale = 2, crop = "full") {
+  const key = `${id}|${scale}|${crop}`;
+  let svg = memo.get(key);
+  if (svg) return svg;
   const grid = SPRITES[id];
-  if (!grid) return mascotSVG("idle", scale);
-  const rows = crop === "head" ? grid.slice(0, HEAD_ROWS[id]) : grid;
-  return pixelSVG(rows, { ...COLORS, ...SKIN[id] }, scale, "avatar");
+  if (!grid) svg = mascotSVG("idle", scale);
+  else svg = pixelSVG(crop === "head" ? grid.slice(0, HEAD_ROWS[id]) : grid, { ...COLORS, ...SKIN[id] }, scale, "avatar");
+  memo.set(key, svg);
+  return svg;
 }

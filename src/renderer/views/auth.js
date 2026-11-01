@@ -87,14 +87,14 @@ function formView(el) {
 
 /* ---------------- verify email ---------------- */
 
-function verifyView(el, { store }) {
+function verifyView(el, { store, actions }) {
   const msg = errorBox();
   const done = h("button.pbtn.accent", {}, "I'M VERIFIED ✓");
   const resend = h("button.pbtn.small", {}, "RESEND EMAIL");
   done.onclick = busy(done, msg, async () => {
     const r = await A.checkVerified();
     if (r.status === "unverified") msg.show("Not verified yet. Click the link in the email first (check spam too).", "warn");
-    else store.set({ auth: r });
+    else actions.enter(r); // starts sync, buddy and chat (onAuthStateChanged won't fire again)
   });
   resend.onclick = busy(resend, msg, async () => {
     await A.resendVerification();

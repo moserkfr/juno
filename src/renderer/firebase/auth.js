@@ -40,7 +40,7 @@ const pick = u => ({ uid: u.uid, email: u.email, displayName: fallbackName(u) })
  * Verified user: make sure users/{uid} exists. If the rules reject us,
  * the email isn't on the allowed list.
  */
-async function enter(user) {
+async function enter(user, retried = false) {
   try {
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
@@ -49,7 +49,15 @@ async function enter(user) {
     await setDoc(ref, { displayName, lastActive: serverTimestamp() }, { merge: true });
     return { status: "ready", user: { ...pick(user), displayName } };
   } catch (e) {
-    if (e.code === "permission-denied") return { status: "denied", user: pick(user) };
+    if (e.code === "permission-denied") {
+      // The account can say "verified" while the ID token the rules check was
+      // minted before verification (valid for up to an hour). Refresh it and
+      // retry once before concluding this email isn't on the guest list.
+      if (!retried) {
+        try { await user.getIdToken(true); return enter(user, true); } catch { /* fall through */ }
+      }
+      return { status: "denied", user: pick(user) };
+    }
     // Offline on first ever launch: getDoc has nothing cached. Let the user in;
     // writes queue up and sync later.
     if (e.code === "unavailable") return { status: "ready", user: pick(user), offline: true };

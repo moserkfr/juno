@@ -13,6 +13,7 @@ const themes = ["witch", "rainy", "matcha", "peach", "gameboy", "candy", "custom
 
 const PILL = view === "pill";
 ipcMain.handle("app:getState", () => ({ alwaysOnTop: true, opacity: 1, startOnLogin: true, isCollapsed: PILL }));
+ipcMain.handle("app:updateReady", () => null);
 for (const ch of ["win:minimize", "win:hide", "win:show", "win:setCollapsed", "win:setAlwaysOnTop",
                   "win:setOpacity", "app:setStartOnLogin", "app:applyPrefs", "app:openExternal", "app:notify", "app:setUnread", "win:flashFrame"]) ipcMain.on(ch, () => {});
 
