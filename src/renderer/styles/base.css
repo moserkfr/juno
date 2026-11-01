@@ -1,11 +1,12 @@
 /* Reset + typography. Colours come from ui/themes.js (CSS variables on :root). */
 :root {
-  /* Readability rules (pixel fonts blur at 125% Windows scaling when tiny):
-     body = Pixelify Sans Medium; small labels = Pixelify SemiBold ("Juno Label");
-     Silkscreen only for BIG display text (status bar, LV, headings, big %). */
-  --font: "Pixelify Sans", Consolas, monospace;
-  --font-label: "Juno Label", "Pixelify Sans", monospace;
-  --font-display: "Silkscreen", "Pixelify Sans", monospace;
+  /* Readability: Jersey 15 = thick strokes, open C vs O, distinct 0/O and
+     I/l/1, and condensed, so it can be set large. Chosen after comparing 9
+     pixel fonts at 125% Windows scaling. Silkscreen (caps only) is kept for
+     short display text: status bar, LV, big numbers, headings. */
+  --font: "Jersey 15", Consolas, monospace;
+  --font-label: "Jersey 15", Consolas, monospace;
+  --font-display: "Silkscreen", "Jersey 15", monospace;
   --u: 2px;                                          /* one "pixel" of the UI grid */
 }
 
@@ -14,7 +15,7 @@ html, body { margin: 0; height: 100%; }
 body {
   background: var(--frame);
   color: var(--text);
-  font: 500 16px/1.4 var(--font);
+  font: 400 20px/1.3 var(--font);
   overflow: hidden;
   user-select: none;
   -webkit-font-smoothing: none;      /* macOS: keep pixel fonts sharp */
@@ -23,12 +24,12 @@ body {
 button, input, textarea, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 p { margin: 0; }
-h1, h2, h3 { margin: 0; font-weight: 400; }
+h1, h2, h3, b, strong { margin: 0; font-weight: 400; } /* one weight: no faux-bold smearing */
 a { color: inherit; }
 svg.px { display: block; flex: none; }
 svg.glyph { display: block; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-.label { font-family: var(--font-label); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+.label { font-family: var(--font-label); font-size: 15px; letter-spacing: .05em; text-transform: uppercase; }
 .muted { color: var(--muted); }
 .selectable { user-select: text; }
 

@@ -45,7 +45,7 @@
 }
 .pbtn[aria-pressed="true"] { background: var(--a1); color: var(--line); }
 .pbtn:disabled { opacity: .5; cursor: default; transform: none; }
-.pbtn.small { padding: 1px 6px; font-size: 14px; }
+.pbtn.small { padding: 1px 6px; font-size: 17px; }
 .pbtn.accent { background: var(--a3); color: var(--line); }
 
 /* Segmented control (track / hours / light-dark) */
@@ -90,7 +90,7 @@ input.prange::-webkit-slider-thumb {
 }
 
 /* Little tags (Both / SDE / PDF) */
-.tag { text-transform: uppercase; font-family: var(--font-label); font-size: 11px; padding: 2px 4px; background: var(--a1); color: var(--line); white-space: nowrap; }
+.tag { text-transform: uppercase; font-family: var(--font-label); font-size: 14px; padding: 2px 4px; background: var(--a1); color: var(--line); white-space: nowrap; }
 .tag.t-sde { background: var(--a2); }
 .tag.t-top { background: var(--a3); }
 .tag.t-pdf { background: var(--panel); outline: 1px solid var(--edge); color: var(--text); }

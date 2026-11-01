@@ -82,11 +82,11 @@
 .mascot { position: absolute; left: 10px; bottom: 6px; width: 64px; height: 56px; }
 .mascot-sprite { position: absolute; left: 0; bottom: 0; }
 .mascot-sprite svg { display: block; margin-bottom: -8px; } /* sprite has empty bottom rows */
-.mascot-fx { position: absolute; left: 44px; top: -14px; color: var(--text); font-family: var(--font-label); font-size: 12px; }
+.mascot-fx { position: absolute; left: 44px; top: -14px; color: var(--text); font-family: var(--font-label); font-size: 15px; }
 .mascot-fx .heart { animation: pop .6s steps(4) forwards; }
 .mascot-fx span { position: absolute; animation: floatz 2.4s steps(8) infinite; }
 .mascot-fx span:nth-child(2) { left: 6px; top: -6px; animation-delay: .8s; }
-.mascot-fx span:nth-child(3) { left: 12px; top: -12px; animation-delay: 1.6s; font-size: 13px; }
+.mascot-fx span:nth-child(3) { left: 12px; top: -12px; animation-delay: 1.6s; font-size: 16px; }
 
 /* Dialogue box: double pixel border with sparkle corners */
 .dialogue {
@@ -98,9 +98,9 @@
 .dialogue::before { /* inner second border */
   content: ""; position: absolute; inset: 3px; border: 2px solid var(--a1); pointer-events: none;
 }
-.dialogue .who { font-family: var(--font-label); font-size: 11px; color: var(--muted); }
+.dialogue .who { font-family: var(--font-label); font-size: 14px; color: var(--muted); }
 .dialogue .say {
-  font-size: 15px; line-height: 1.25; color: var(--text);
+  font-size: 18px; line-height: 1.25; color: var(--text);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   overflow-wrap: anywhere;
 }
@@ -138,7 +138,7 @@
 .ntile:nth-of-type(3) { --tile: var(--a1); }
 .ntile:nth-of-type(4) { --tile: var(--a2); }
 .ntile:nth-of-type(5) { --tile: var(--a1); }
-.ntile .lbl { font-family: var(--font-label); font-size: 11px; }
+.ntile .lbl { font-family: var(--font-label); font-size: 14px; }
 .ntile:hover .ico { transform: translateY(-2px); }
 .ntile.active .ico {
   transform: translateY(2px);
@@ -150,24 +150,24 @@
 .badge {
   position: absolute; top: -2px; right: calc(50% - 30px); min-width: 16px; height: 14px; padding: 0 3px;
   background: var(--a3); color: var(--line); border: 2px solid var(--line);
-  font-family: var(--font-label); font-size: 11px; line-height: 10px; text-align: center;
+  font-family: var(--font-label); font-size: 14px; line-height: 10px; text-align: center;
 }
 
 /* ---------- toasts (errors / info) ---------- */
 .toasts { position: absolute; left: 10px; right: 10px; top: 34px; z-index: 20; display: grid; gap: 8px; pointer-events: none; }
 .toast {
   pointer-events: auto; display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px;
-  font-size: 14px; --bc: var(--line);
+  font-size: 17px; --bc: var(--line);
 }
 .toast.error { background: var(--a3); color: var(--line); }
 .toast.info { background: var(--a2); color: var(--line); }
 .toast.warn { background: var(--review); color: var(--line); }
-.toast b { font-family: var(--font-label); font-size: 11px; display: block; }
+.toast b { font-family: var(--font-label); font-size: 14px; display: block; }
 .toast .x { margin-left: auto; background: none; border: 0; padding: 2px; color: inherit; }
 
 /* Persistent offline strip */
 .offline {
-  display: none; flex: none; text-align: center; padding: 2px; font-family: var(--font-label); font-size: 11px;
+  display: none; flex: none; text-align: center; padding: 2px; font-family: var(--font-label); font-size: 14px;
   background: repeating-linear-gradient(90deg, var(--review) 0 8px, color-mix(in srgb, var(--review) 70%, var(--panel)) 8px 16px);
   color: var(--line);
 }
@@ -199,13 +199,13 @@
 .pl-info { flex: 1; min-width: 0; display: grid; gap: 3px; }
 .pl-row { display: flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: 13px; }
 .pl-lv { font-weight: 400; }
-.pl-pct { font-size: 12px; color: var(--muted); }
+.pl-pct { font-size: 15px; color: var(--muted); }
 .pl-row .battery .cells i { width: 4px; height: 6px; }
-.pl-topic { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-topic { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pl-badge {
   flex: none; display: flex; align-items: center; gap: 2px; padding: 2px 4px;
   background: var(--a3); color: var(--line); border: 2px solid var(--line);
-  font-family: var(--font-label); font-size: 11px;
+  font-family: var(--font-label); font-size: 14px;
 }
 .pl-exp { flex: none; border-color: var(--edge); color: var(--text); }
 .pl-exp:hover { background: var(--a2); color: var(--line); }
