@@ -16,10 +16,10 @@ function build() {
     { type: "separator" },
     { label: "Always on top", type: "checkbox", checked: s.alwaysOnTop, click: m => actions.setAlwaysOnTop(m.checked) },
     { label: "Start on login", type: "checkbox", checked: s.startOnLogin, click: m => actions.setStartOnLogin(m.checked) },
-    ...(actions.updateReady() ? [
-      { type: "separator" },
-      { label: `Restart to update (v${actions.updateReady()})`, click: actions.restartToUpdate },
-    ] : []),
+    { type: "separator" },
+    actions.updateReady()
+      ? { label: `Restart to update (v${actions.updateReady()})`, click: actions.restartToUpdate }
+      : { label: "Check for updates", click: actions.checkUpdates },
     { type: "separator" },
     { label: "Quit", click: actions.quit },
   ]));

@@ -214,6 +214,14 @@ function onUpdate(version) {
   toast("UPDATE READY", `Juno v${version} installs when you restart (SET → ABOUT, or the tray menu).`, "info", 0);
 }
 api.onUpdate(onUpdate);
+// Feedback for a manual "Check for updates", so it never looks like nothing happened.
+api.onUpdateStatus(st => {
+  if (st.state === "checking") toast("CHECKING...", "Looking for a new version of Juno.", "info", 2500);
+  else if (st.state === "latest") toast("UP TO DATE", `You're on the latest version (v${store.get().win.version}).`, "info");
+  else if (st.state === "downloading") toast("DOWNLOADING", `Juno v${st.version} is downloading. You'll get a message when it's ready.`, "info");
+  else if (st.state === "dev") toast("DEV MODE", "Updates only run in the installed app.", "warn");
+  else if (st.state === "error") toast("UPDATE CHECK FAILED", st.message, "error");
+});
 api.updateReady().then(onUpdate).catch(() => { /* no updater (dev) */ });
 
 // Clicking a notification asks us to open a tab.

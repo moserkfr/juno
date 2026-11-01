@@ -70,7 +70,7 @@ function createWindow() {
   win.on("close", e => {
     if (!quitting) { e.preventDefault(); win.hide(); refreshTray(); }
   });
-  win.on("show", () => { refreshTray(); send("window:visibility", true); });
+  win.on("show", () => { refreshTray(); send("window:visibility", true); maybeCheckUpdates(); });
   win.on("hide", () => { refreshTray(); send("window:visibility", false); });
   win.on("focus", () => send("window:focus", true));
   win.on("blur", () => { lastBlur = Date.now(); send("window:focus", false); });
@@ -232,7 +232,43 @@ function notify({ title, body } = {}) {
 // newer latest.yml, downloads in the background, and installs on next quit.
 // Never restarts by itself: Juno lives in the tray, so a surprise restart
 // could cut you off mid-chat. The tray offers "Restart to update" instead.
+//
+// When to check: Juno starts with Windows and lives in the tray, so it is
+// almost never relaunched. "At launch + every 6 h" meant a fix could take
+// hours to arrive. So: hourly, when the user opens Juno again (desktop icon
+// while running = second-instance), when shown from the tray (max every
+// 15 min), and on demand ("Check for updates").
 let updateReady = null;
+let lastCheck = 0;
+let checking = false;
+
+/** manual = user asked: report "up to date" / errors back to the UI. */
+async function checkUpdates(manual = false) {
+  if (!app.isPackaged) {
+    if (manual) send("app:updateStatus", { state: "dev" });
+    return;
+  }
+  if (updateReady) { if (manual) send("app:update", updateReady); return; }
+  if (checking) return;
+  checking = true;
+  lastCheck = Date.now();
+  if (manual) send("app:updateStatus", { state: "checking" });
+  try {
+    const r = await autoUpdater.checkForUpdates();
+    const newer = r && r.updateInfo && r.updateInfo.version !== app.getVersion();
+    if (manual) send("app:updateStatus", newer ? { state: "downloading", version: r.updateInfo.version } : { state: "latest" });
+  } catch (e) {
+    console.error("update check:", e && e.message);
+    if (manual) send("app:updateStatus", { state: "error", message: (e && e.message) || String(e) });
+  } finally {
+    checking = false;
+  }
+}
+
+/** Opportunistic check (window shown / app reopened), at most every 15 min. */
+function maybeCheckUpdates() {
+  if (Date.now() - lastCheck > 15 * 60_000) checkUpdates();
+}
 
 function setupUpdates() {
   if (!app.isPackaged) return;            // npm start never updates itself
@@ -244,9 +280,8 @@ function setupUpdates() {
     send("app:update", info.version);
   });
   autoUpdater.on("error", e => console.error("auto-update:", e && e.message));
-  const check = () => autoUpdater.checkForUpdates().catch(e => console.error("update check:", e && e.message));
-  setTimeout(check, 10_000);               // let the app settle first
-  setInterval(check, 6 * 60 * 60_000);     // then every 6 hours
+  setTimeout(() => checkUpdates(), 10_000); // let the app settle first
+  setInterval(() => checkUpdates(), 60 * 60_000); // then hourly
 }
 
 function restartToUpdate() {
@@ -282,12 +317,14 @@ ipcMain.on("app:notify", (_e, n) => notify(n));
 ipcMain.on("app:setUnread", (_e, n) => setUnread(n));
 ipcMain.on("app:restartToUpdate", () => restartToUpdate());
 ipcMain.handle("app:updateReady", () => updateReady);
+ipcMain.on("app:checkForUpdates", () => checkUpdates(true));
 
 /* ------------------------------------------------------------------ */
 /*  Lifecycle                                                          */
 /* ------------------------------------------------------------------ */
 
-app.on("second-instance", showWindow);
+// Opening Juno again (desktop icon) while it runs: show it, and check for updates.
+app.on("second-instance", () => { showWindow(); maybeCheckUpdates(); });
 app.on("before-quit", () => {
   quitting = true;
   if (win) ws.captureBounds(win);
@@ -301,6 +338,7 @@ app.whenReady().then(() => {
     isVisible: () => !!(win && win.isVisible()),
     toggleVisible, setAlwaysOnTop, setStartOnLogin, quit,
     updateReady: () => updateReady, restartToUpdate,
+    checkUpdates: () => { showWindow(); checkUpdates(true); },
   });
   setupUpdates();
   // Make Windows match the saved setting on every launch (default: on).
