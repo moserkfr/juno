@@ -8,3 +8,6 @@ firebase.config.js
 # style references only — never published or shipped
 aesthetic-*.*
 dsa-placement-checklist.html
+
+# personal reference image — never published or shipped
+characters.*

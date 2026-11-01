@@ -27,7 +27,7 @@ app.whenReady().then(async () => {
   win.webContents.on("console-message", (_e, level, msg) => {
     if (level >= 2) fs.appendFileSync(logFile, msg + "\n");
   });
-  await win.loadFile(path.join(__dirname, "../dist/index.html"));
+  await win.loadFile(path.join(__dirname, "../dist/index.html"), { hash: view === "auth" ? "" : "preview" });
   for (const t of themes) {
     const [preset, mode] = t.split("-");
     const theme = preset === "custom" ? { preset, mode, accent: "#ff8fb1" } : { preset };
@@ -37,6 +37,8 @@ app.whenReady().then(async () => {
     await win.webContents.executeJavaScript(
       `document.querySelector('.ntile[title="${view === "settings" ? "SET" : view.toUpperCase()}"]')?.click()`);
     await new Promise(r => setTimeout(r, 900));
+    if (process.argv[4]) await win.webContents.executeJavaScript(process.argv[4]);
+    await new Promise(r => setTimeout(r, 200));
     const img = await win.webContents.capturePage();
     fs.writeFileSync(path.join(out, `${t}.png`), img.toPNG());
   }
