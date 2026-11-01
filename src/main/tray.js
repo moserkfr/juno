@@ -4,7 +4,7 @@
  * start on login, quit (the only way to really exit).
  */
 const { Tray, Menu } = require("electron");
-const { makeIcon } = require("./pixelIcon");
+const { makeIcon, GRID_UNREAD } = require("./pixelIcon");
 
 let tray = null;
 let actions = null;
@@ -34,4 +34,13 @@ function createTray(a) {
 /** Rebuild the menu after any state change so the checkmarks stay truthful. */
 function refreshTray() { if (tray) build(); }
 
-module.exports = { createTray, refreshTray };
+/** Pink dot on the tray icon + tooltip while there are unread messages. */
+let lastUnread = -1;
+function setTrayUnread(n) {
+  if (!tray || n === lastUnread) return;
+  lastUnread = n;
+  tray.setImage(makeIcon(n > 0 ? GRID_UNREAD : undefined));
+  tray.setToolTip(n > 0 ? `ByteBun · ${n} unread` : "ByteBun");
+}
+
+module.exports = { createTray, refreshTray, setTrayUnread };

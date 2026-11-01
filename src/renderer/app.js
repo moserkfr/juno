@@ -162,6 +162,50 @@ store.subscribe(() => {
   }, 600);
 });
 
+/* ---------------- notifications ---------------- */
+
+// Per-device switch (localStorage, not synced): you may want them on one PC only.
+const NOTIFY_KEY = "bytebun.notify";
+const notifyEnabled = () => { try { return localStorage.getItem(NOTIFY_KEY) !== "0"; } catch { return true; } };
+const setNotifyEnabled = on => { try { localStorage.setItem(NOTIFY_KEY, on ? "1" : "0"); } catch { /* ignore */ } };
+
+let notifyBaseline = null;  // newest message time already "seen" by the notifier
+let lastUnreadSent = -1;
+
+/** Only bother you when you're not looking at the widget. */
+const awayFromWidget = s => !s.winVisible || !s.winFocused || !!s.win.isCollapsed;
+
+function describe(m, name) {
+  if (m.type === "nudge") return { title: `♥ ${name} poked you!`, body: "Study break's over? Let's go!" };
+  if (m.type === "progress") return { title: `★ ${name}`, body: m.text };
+  return { title: name, body: m.text };
+}
+
+store.subscribe(s => {
+  if (s.auth.status !== "ready") { notifyBaseline = null; if (lastUnreadSent) { lastUnreadSent = 0; api.setUnread(0); } return; }
+
+  // Tray dot / tooltip
+  const unread = unreadCount(s);
+  if (unread !== lastUnreadSent) { lastUnreadSent = unread; api.setUnread(unread); }
+
+  // New messages from others since the last check
+  if (!s.messages.length) return;
+  const newest = s.messages.at(-1).at;
+  if (notifyBaseline == null) { notifyBaseline = newest; return; } // initial history: no pings
+  const me = s.auth.user.uid;
+  const fresh = s.messages.filter(m => m.at > notifyBaseline && m.uid !== me && m.at > readAt(s));
+  notifyBaseline = Math.max(notifyBaseline, newest);
+  if (!fresh.length || !notifyEnabled() || !awayFromWidget(s)) return;
+
+  const last = fresh.at(-1);
+  const name = s.people[last.uid]?.displayName || last.name || "Buddy";
+  if (fresh.length === 1) { const d = describe(last, name); api.notify(d.title, d.body); }
+  else api.notify(name, `sent ${fresh.length} messages: "${last.text.slice(0, 80)}"`);
+});
+
+// Clicking a notification asks us to open a tab.
+api.onNavigate(view => { if (store.get().auth.status === "ready") actions.go(view); });
+
 /** Mascot is sleepy until you tick something today. */
 function moodFor(items) {
   const today = startOfDay();
@@ -253,6 +297,9 @@ const actions = {
     }
   },
   toast: (...a) => toast(...a),
+  notifyEnabled: () => notifyEnabled(),
+  setNotify(on) { setNotifyEnabled(on); store.set({}); },
+  testNotify: () => api.notify("ByteBun", "Notifications work! ♥"),
   async signOut() {
     // Hand any edits from the last 800 ms to Firestore. No await: offline it
     // would wait for the server forever. setDoc queues the write in the local

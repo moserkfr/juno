@@ -35,6 +35,10 @@ const PALETTE = {
   L: [0x3e, 0x9a, 0x6e], // leaf shade
 };
 
+/** Same mascot with a pink "unread" dot in the top-right corner. */
+const GRID_UNREAD = GRID.map((row, y) =>
+  y < 4 ? row.slice(0, 11) + ["..ooo", ".occo", "occco", ".occo"][y].slice(0, 5) : row);
+
 /** Render GRID at `scale` (2 => 32x32) into a raw BGRA bitmap. */
 function makeIcon(grid = GRID, scale = 2) {
   const size = grid.length * scale;
@@ -51,4 +55,4 @@ function makeIcon(grid = GRID, scale = 2) {
   return nativeImage.createFromBitmap(buf, { width: size, height: size, scaleFactor: scale });
 }
 
-module.exports = { makeIcon, GRID, PALETTE };
+module.exports = { makeIcon, GRID, GRID_UNREAD, PALETTE };

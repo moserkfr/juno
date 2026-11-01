@@ -3,10 +3,11 @@
  * The UI (renderer) never touches Node — it asks for things through the
  * small API in src/preload/preload.js, and every handler below validates input.
  */
-const { app, BrowserWindow, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, Notification } = require("electron");
 const path = require("path");
 const ws = require("./windowState");
-const { createTray, refreshTray } = require("./tray");
+const { createTray, refreshTray, setTrayUnread } = require("./tray");
+const { makeIcon } = require("./pixelIcon");
 
 // --- Single instance: a second launch just focuses the existing widget. ---
 if (!app.requestSingleInstanceLock()) {
@@ -14,8 +15,11 @@ if (!app.requestSingleInstanceLock()) {
   return; // CommonJS module scope: stop executing this file
 }
 
-// Needed on Windows for desktop notifications to show the app's name.
-app.setAppUserModelId("com.bytebun.app");
+// Windows identifies the app for notifications by its AppUserModelID.
+// The installer registers "com.bytebun.app" (= build.appId in package.json)
+// on its Start Menu shortcut. In dev there's no shortcut, so use the exe path,
+// which is Electron's documented workaround.
+app.setAppUserModelId(app.isPackaged ? "com.bytebun.app" : process.execPath);
 
 let win = null;
 let quitting = false;
@@ -177,6 +181,44 @@ function openExternal(url) {
 function quit() { quitting = true; app.quit(); }
 
 /* ------------------------------------------------------------------ */
+/*  Notifications                                                      */
+/* ------------------------------------------------------------------ */
+
+// Keep references until closed: if a Notification object is garbage-collected,
+// Electron silently drops its click events.
+const liveNotes = new Set();
+
+/** Show a desktop notification; clicking it opens the widget on CHAT. */
+function notify({ title, body } = {}) {
+  if (!Notification.isSupported()) return;
+  const n = new Notification({
+    title: String(title || "ByteBun").slice(0, 64),
+    body: String(body || "").slice(0, 160),
+    icon: makeIcon(undefined, 4),
+    silent: false,
+  });
+  liveNotes.add(n);
+  const done = () => liveNotes.delete(n);
+  n.on("click", () => {
+    done();
+    if (ws.get().isCollapsed) setCollapsed(false);
+    showWindow();
+    send("app:navigate", "chat");
+  });
+  n.on("close", done);
+  n.on("failed", done);
+  n.show();
+  if (win && !win.isFocused()) win.flashFrame(true); // taskbar button flashes
+}
+
+/** Unread count from the renderer -> tray dot + tooltip; stop flashing at 0. */
+function setUnread(n) {
+  n = Math.max(0, Number(n) || 0);
+  setTrayUnread(n);
+  if (n === 0 && win) win.flashFrame(false);
+}
+
+/* ------------------------------------------------------------------ */
 /*  IPC: the handlers behind window.bytebun.* in the preload           */
 /* ------------------------------------------------------------------ */
 
@@ -192,6 +234,8 @@ ipcMain.on("app:setStartOnLogin", (_e, on) => setStartOnLogin(on));
 ipcMain.on("app:applyPrefs", (_e, p) => applyPrefs(p));
 ipcMain.on("app:openExternal", (_e, url) => openExternal(url));
 ipcMain.on("app:quit", () => quit());
+ipcMain.on("app:notify", (_e, n) => notify(n));
+ipcMain.on("app:setUnread", (_e, n) => setUnread(n));
 
 /* ------------------------------------------------------------------ */
 /*  Lifecycle                                                          */

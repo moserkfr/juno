@@ -59,6 +59,8 @@ export const settingsView = {
     const opLabel = h("span.label", {}, opacity.value + "%");
     const aot = toggle("Always on top", () => store.get().win.alwaysOnTop, v => api.setAlwaysOnTop(v));
     const sol = toggle("Start on login", () => store.get().win.startOnLogin, v => api.setStartOnLogin(v));
+    const notif = toggle("Desktop notifications", () => actions.notifyEnabled(), v => actions.setNotify(v));
+    const testBtn = h("button.pbtn.small", { onclick: () => actions.testNotify() }, "TEST");
 
     const charPicker = createAvatarPicker(id => actions.setPrefs({ avatar: id }));
 
@@ -94,6 +96,7 @@ export const settingsView = {
         h("h3", {}, "WINDOW"),
         h("div.row", {}, h("span", {}, "Opacity"), opacity, opLabel),
         aot.row, sol.row,
+        h("div.row", {}, h("span.grow", {}, "Desktop notifications"), testBtn, notif.row.lastChild),
         h("p.muted", { style: { fontSize: "12px", marginTop: "6px" } },
           "Start on login only applies to the installed app.")),
     );
@@ -107,7 +110,7 @@ export const settingsView = {
         opacity.value = Math.round(s.win.opacity * 100);
         opLabel.textContent = opacity.value + "%";
       }
-      aot.sync(); sol.sync();
+      aot.sync(); sol.sync(); notif.sync();
       charPicker.update(s.prefs.avatar);
     }
     update(s0);
