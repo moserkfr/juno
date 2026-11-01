@@ -1,5 +1,5 @@
 /**
- * ByteBun, the mascot: an original mochi blob with a sprout.
+ * Juno, the mascot: an original mochi blob with a sprout.
  *
  * One body grid + small "paint" overlays for each face, so every expression
  * is guaranteed to line up. Animation = swapping the SVG every tick and

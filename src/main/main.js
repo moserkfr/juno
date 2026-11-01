@@ -16,10 +16,10 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 // Windows identifies the app for notifications by its AppUserModelID.
-// The installer registers "com.bytebun.app" (= build.appId in package.json)
+// The installer registers "com.juno.app" (= build.appId in package.json)
 // on its Start Menu shortcut. In dev there's no shortcut, so use the exe path,
 // which is Electron's documented workaround.
-app.setAppUserModelId(app.isPackaged ? "com.bytebun.app" : process.execPath);
+app.setAppUserModelId(app.isPackaged ? "com.juno.app" : process.execPath);
 
 let win = null;
 let quitting = false;
@@ -43,7 +43,7 @@ function createWindow() {
     maximizable: false,
     fullscreenable: false,
     backgroundColor: "#fff7d9", // matches Witch Cream while the page loads
-    title: "ByteBun",
+    title: "Juno",
     webPreferences: {
       preload: path.join(__dirname, "../preload/preload.js"),
       contextIsolation: true,   // page JS and preload JS live in separate worlds
@@ -192,7 +192,7 @@ const liveNotes = new Set();
 function notify({ title, body } = {}) {
   if (!Notification.isSupported()) return;
   const n = new Notification({
-    title: String(title || "ByteBun").slice(0, 64),
+    title: String(title || "Juno").slice(0, 64),
     body: String(body || "").slice(0, 160),
     icon: makeIcon(undefined, 4),
     silent: false,
@@ -219,7 +219,7 @@ function setUnread(n) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  IPC: the handlers behind window.bytebun.* in the preload           */
+/*  IPC: the handlers behind window.juno.* in the preload           */
 /* ------------------------------------------------------------------ */
 
 ipcMain.handle("app:getState", () => publicState());

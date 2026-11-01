@@ -27,7 +27,7 @@ import { buddyView } from "./views/buddy.js";
 import { watchChat, sendMessage, markRead } from "./firebase/chat.js";
 import { chatView } from "./views/chat.js";
 
-const api = window.bytebun;
+const api = window.juno;
 
 /* ---------------- state ---------------- */
 
@@ -58,7 +58,7 @@ const store = createStore({
 // Stage 4 kept items in localStorage. They're read once, handed to sync for a
 // one-time upload if the account has nothing in Firestore yet, then removed.
 const PREVIEW = location.hash === "#preview";
-const itemsKey = uid => "bytebun.items." + uid;
+const itemsKey = uid => "juno.items." + uid;
 function takeLegacyItems(uid) {
   try {
     const items = JSON.parse(localStorage.getItem(itemsKey(uid)) || "{}");
@@ -132,7 +132,7 @@ function unreadCount(s) {
   return s.messages.filter(m => m.uid !== me && m.at > r).length;
 }
 
-/** Dialogue box: the buddy's latest message, or null (= ByteBun's line of the day). */
+/** Dialogue box: the buddy's latest message, or null (= Juno's line of the day). */
 function buddyLine(s) {
   const me = s.auth.user?.uid;
   const m = [...s.messages].reverse().find(x => x.uid !== me);
@@ -166,7 +166,7 @@ store.subscribe(() => {
 /* ---------------- notifications ---------------- */
 
 // Per-device switch (localStorage, not synced): you may want them on one PC only.
-const NOTIFY_KEY = "bytebun.notify";
+const NOTIFY_KEY = "juno.notify";
 const notifyEnabled = () => { try { return localStorage.getItem(NOTIFY_KEY) !== "0"; } catch { return true; } };
 const setNotifyEnabled = on => { try { localStorage.setItem(NOTIFY_KEY, on ? "1" : "0"); } catch { /* ignore */ } };
 
@@ -200,7 +200,7 @@ store.subscribe(s => {
 
   const last = fresh.at(-1);
   const name = s.people[last.uid]?.displayName || last.name || "Buddy";
-  // A nudge makes ByteBun hop, even in the pill.
+  // A nudge makes Juno hop, even in the pill.
   if (fresh.some(m => m.type === "nudge")) { scene.mascot.celebrate(); pill.mascot.celebrate(); }
   if (fresh.length === 1) { const d = describe(last, name); api.notify(d.title, d.body); }
   else api.notify(name, `sent ${fresh.length} messages: "${last.text.slice(0, 80)}"`);
@@ -302,7 +302,7 @@ const actions = {
   toast: (...a) => toast(...a),
   notifyEnabled: () => notifyEnabled(),
   setNotify(on) { setNotifyEnabled(on); store.set({}); },
-  testNotify: () => api.notify("ByteBun", "Notifications work! ♥"),
+  testNotify: () => api.notify("Juno", "Notifications work! ♥"),
   async signOut() {
     // Hand any edits from the last 800 ms to Firestore. No await: offline it
     // would wait for the server forever. setDoc queues the write in the local
@@ -374,9 +374,8 @@ function render(s) {
   const gated = s.auth.status !== "ready";
   titlebar.update(s);
   status.update(s);
-  // While gated, ByteBun talks instead of showing chat messages.
-  // While gated, ByteBun talks; otherwise the buddy's latest message (or a daily line).
-  scene.update({ ...s, dialogue: gated ? { who: "BYTEBUN", text: GATE_LINES[s.auth.status] } : buddyLine(s) });
+  // While gated, Juno talks; otherwise the buddy's latest message (or a daily line).
+  scene.update({ ...s, dialogue: gated ? { who: "JUNO", text: GATE_LINES[s.auth.status] } : buddyLine(s) });
   const unread = s.auth.status === "ready" ? unreadCount(s) : 0;
   nav.update({ ...s, due: dueCount(s.items), unread });
   // Collapsed = the 300x70 pill; the handheld stays mounted (just hidden).

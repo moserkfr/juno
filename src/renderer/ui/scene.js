@@ -71,7 +71,7 @@ export function createScene({ onDialogueClick }) {
     // Speaker portrait (buddy's character) + name. Name is a text node, never HTML.
     who.replaceChildren(
       ...(d && d.avatar !== undefined ? [raw(avatarSVG(d.avatar, 1, "head"))] : []),
-      d ? d.who : "BYTEBUN SAYS");
+      d ? d.who : "JUNO SAYS");
     say.textContent = d ? d.text : lineOfTheDay();
     mascot.setMood(s.mood || "idle");
   }

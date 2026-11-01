@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// ByteBun security rules.
+// Juno security rules.
 // The app's code can't be trusted (anyone can unpack the .exe), so EVERY
 // permission is decided here, on Google's servers.
 

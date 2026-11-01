@@ -23,7 +23,7 @@ let autoOpened = false;        // open the current topic once per app session
 
 export const listView = {
   mount(el, { store, actions }) {
-    const api = window.bytebun;
+    const api = window.juno;
 
     /* ---------------- header ---------------- */
     const pctText = h("span.big");

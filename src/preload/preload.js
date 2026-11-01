@@ -1,7 +1,7 @@
 /**
  * Preload: the ONLY bridge between the web page and Electron.
  *
- * contextBridge copies this object into the page as `window.bytebun`.
+ * contextBridge copies this object into the page as `window.juno`.
  * Each function is a narrow, named action — the page never gets ipcRenderer,
  * require, or any way to send arbitrary messages. Runs sandboxed, so this
  * file can only use `electron`'s renderer-safe modules (no local requires).
@@ -15,7 +15,7 @@ function on(channel, cb) {
   return () => ipcRenderer.removeListener(channel, handler);
 }
 
-contextBridge.exposeInMainWorld("bytebun", {
+contextBridge.exposeInMainWorld("juno", {
   getState: () => ipcRenderer.invoke("app:getState"),
 
   minimize: () => ipcRenderer.send("win:minimize"),

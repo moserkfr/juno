@@ -12,7 +12,7 @@ let actions = null;
 function build() {
   const s = actions.getState();
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: actions.isVisible() ? "Hide ByteBun" : "Show ByteBun", click: actions.toggleVisible },
+    { label: actions.isVisible() ? "Hide Juno" : "Show Juno", click: actions.toggleVisible },
     { type: "separator" },
     { label: "Always on top", type: "checkbox", checked: s.alwaysOnTop, click: m => actions.setAlwaysOnTop(m.checked) },
     { label: "Start on login", type: "checkbox", checked: s.startOnLogin, click: m => actions.setStartOnLogin(m.checked) },
@@ -25,7 +25,7 @@ function build() {
 function createTray(a) {
   actions = a;
   tray = new Tray(makeIcon());
-  tray.setToolTip("ByteBun");
+  tray.setToolTip("Juno");
   tray.on("click", actions.toggleVisible);
   build();
   return tray;
@@ -40,7 +40,7 @@ function setTrayUnread(n) {
   if (!tray || n === lastUnread) return;
   lastUnread = n;
   tray.setImage(makeIcon(n > 0 ? GRID_UNREAD : undefined));
-  tray.setToolTip(n > 0 ? `ByteBun · ${n} unread` : "ByteBun");
+  tray.setToolTip(n > 0 ? `Juno · ${n} unread` : "Juno");
 }
 
 module.exports = { createTray, refreshTray, setTrayUnread };

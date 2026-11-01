@@ -99,10 +99,10 @@ const HEAD_ROWS = { ruhani: 15, manosh: 16 };   // where the head crop ends
 export const AVATARS = [
   { id: "ruhani", name: "Ruhani" },
   { id: "manosh", name: "Manosh" },
-  { id: "bytebun", name: "ByteBun" },
+  { id: "juno", name: "Juno" },
 ];
 
-/** SVG string for a character. Unknown/unset ids fall back to ByteBun. */
+/** SVG string for a character. Unknown/unset ids fall back to Juno. */
 export function avatarSVG(id, scale = 2, crop = "full") {
   const grid = SPRITES[id];
   if (!grid) return mascotSVG("idle", scale);

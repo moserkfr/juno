@@ -22,7 +22,7 @@ function toggle(label, getOn, onChange) {
 
 export const settingsView = {
   mount(el, { store, actions }) {
-    const api = window.bytebun;
+    const api = window.juno;
     const s0 = store.get();
 
     /* ---- theme presets ---- */

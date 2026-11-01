@@ -33,7 +33,7 @@ app.whenReady().then(async () => {
     const [preset, mode] = t.split("-");
     const theme = preset === "custom" ? { preset, mode, accent: "#ff8fb1" } : { preset };
     await win.webContents.executeJavaScript(
-      `localStorage.setItem("bytebun.prefs", JSON.stringify({theme:${JSON.stringify(theme)}})); location.reload();`);
+      `localStorage.setItem("juno.prefs", JSON.stringify({theme:${JSON.stringify(theme)}})); location.reload();`);
     await new Promise(r => win.webContents.once("did-finish-load", r));
     await win.webContents.executeJavaScript(
       `document.querySelector('.ntile[title="${view === "settings" ? "SET" : view.toUpperCase()}"]')?.click()`);

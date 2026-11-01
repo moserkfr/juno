@@ -1,6 +1,6 @@
 {
-  "name": "bytebun",
-  "productName": "ByteBun",
+  "name": "juno",
+  "productName": "Juno",
   "version": "0.1.0",
   "description": "Pixel-art DSA placement checklist widget with a study buddy",
   "main": "src/main/main.js",

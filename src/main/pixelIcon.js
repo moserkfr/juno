@@ -5,7 +5,7 @@
  */
 const { nativeImage } = require("electron");
 
-// ByteBun: a mochi blob with a sprout. '.' = transparent.
+// Juno: a mochi blob with a sprout. '.' = transparent.
 const GRID = [
   "................",
   "........ll......",

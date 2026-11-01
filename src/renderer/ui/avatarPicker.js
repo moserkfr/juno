@@ -1,5 +1,5 @@
 /**
- * Character picker: three cards (Ruhani / Manosh / ByteBun).
+ * Character picker: three cards (Ruhani / Manosh / Juno).
  * Used in SET and in the one-time "WHO ARE YOU?" card on LIST.
  * The choice is stored in prefs.avatar, so it syncs and your buddy sees it.
  */

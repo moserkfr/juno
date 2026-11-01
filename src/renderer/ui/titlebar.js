@@ -7,7 +7,7 @@ import { glyph } from "../art/sprites.js";
 import { mascotSVG } from "../art/mascot.js";
 
 export function createTitlebar(store) {
-  const api = window.bytebun;
+  const api = window.juno;
   const btn = (name, title, onclick, cls = "") =>
     h("button.tbtn" + cls, { title, "aria-label": title, onclick }, raw(glyph(name)));
 
@@ -15,7 +15,7 @@ export function createTitlebar(store) {
   const col = btn("collapse", "Collapse to pill", () => api.setCollapsed(true));
 
   const el = h("header.titlebar", {},
-    h("div.brand", {}, raw(mascotSVG("idle", 1)), "BYTEBUN"),
+    h("div.brand", {}, raw(mascotSVG("idle", 1)), "JUNO"),
     pin, col,
     btn("min", "Minimise", () => api.minimize()),
     btn("close", "Hide to tray", () => api.hide(), ".close"),

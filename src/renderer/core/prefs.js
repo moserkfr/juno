@@ -6,9 +6,9 @@
 import { DEFAULT_TRACK, DEFAULT_HOURS } from "../../data/plan.js";
 import { DEFAULT_THEME } from "../ui/themes.js";
 
-const KEY = "bytebun.prefs";
+const KEY = "juno.prefs";
 
-// avatar: null until the user picks a character ("ruhani" | "manosh" | "bytebun")
+// avatar: null until the user picks a character ("ruhani" | "manosh" | "juno")
 export const DEFAULT_PREFS = { track: DEFAULT_TRACK, hours: DEFAULT_HOURS, theme: DEFAULT_THEME, avatar: null };
 
 /** Fill in missing fields so old/partial saves never crash the UI. */
@@ -17,6 +17,8 @@ export function normalizePrefs(p = {}) {
     ...DEFAULT_PREFS,
     ...p,
     theme: { ...DEFAULT_THEME, ...(p.theme || {}) },
+    // The mascot was called "ByteBun" before the rename to Juno.
+    avatar: p.avatar === "bytebun" ? "juno" : p.avatar ?? null,
   };
 }
 
