@@ -46,6 +46,7 @@ const store = createStore({
   chatReadAt: 0,           // local "read up to" (also synced on my user doc)
   winVisible: true,
   winFocused: document.hasFocus(),
+  update: null,            // version string once an update is downloaded
   progress: computeProgress({}, prefs.track, prefs.hours),
   dialogue: null,          // { who, text } latest buddy message
   mood: "idle",
@@ -205,6 +206,15 @@ store.subscribe(s => {
   if (fresh.length === 1) { const d = describe(last, name); api.notify(d.title, d.body); }
   else api.notify(name, `sent ${fresh.length} messages: "${last.text.slice(0, 80)}"`);
 });
+
+// Auto-update downloaded (installed app only).
+function onUpdate(version) {
+  if (!version || store.get().update === version) return;
+  store.set({ update: version });
+  toast("UPDATE READY", `Juno v${version} installs when you restart (SET → ABOUT, or the tray menu).`, "info", 0);
+}
+api.onUpdate(onUpdate);
+api.updateReady().then(onUpdate);
 
 // Clicking a notification asks us to open a tab.
 api.onNavigate(view => { if (store.get().auth.status === "ready") actions.go(view); });

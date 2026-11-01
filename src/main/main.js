@@ -8,6 +8,7 @@ const path = require("path");
 const ws = require("./windowState");
 const { createTray, refreshTray, setTrayUnread } = require("./tray");
 const { makeIcon } = require("./pixelIcon");
+const { autoUpdater } = require("electron-updater");
 
 // --- Single instance: a second launch just focuses the existing widget. ---
 if (!app.requestSingleInstanceLock()) {
@@ -211,6 +212,37 @@ function notify({ title, body } = {}) {
   if (win && !win.isFocused()) win.flashFrame(true); // taskbar button flashes
 }
 
+/* ------------------------------------------------------------------ */
+/*  Auto-updates (installed app only)                                  */
+/* ------------------------------------------------------------------ */
+
+// Checks GitHub Releases of moserkfr/juno (package.json build.publish) for a
+// newer latest.yml, downloads in the background, and installs on next quit.
+// Never restarts by itself: Juno lives in the tray, so a surprise restart
+// could cut you off mid-chat. The tray offers "Restart to update" instead.
+let updateReady = null;
+
+function setupUpdates() {
+  if (!app.isPackaged) return;            // npm start never updates itself
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on("update-downloaded", info => {
+    updateReady = info.version;
+    refreshTray();
+    send("app:update", info.version);
+  });
+  autoUpdater.on("error", e => console.error("auto-update:", e && e.message));
+  const check = () => autoUpdater.checkForUpdates().catch(e => console.error("update check:", e && e.message));
+  setTimeout(check, 10_000);               // let the app settle first
+  setInterval(check, 6 * 60 * 60_000);     // then every 6 hours
+}
+
+function restartToUpdate() {
+  if (!updateReady) return;
+  quitting = true;                         // let our close-to-tray handler through
+  autoUpdater.quitAndInstall(true, true);  // silent install, relaunch afterwards
+}
+
 /** Unread count from the renderer -> tray dot + tooltip; stop flashing at 0. */
 function setUnread(n) {
   n = Math.max(0, Number(n) || 0);
@@ -236,6 +268,8 @@ ipcMain.on("app:openExternal", (_e, url) => openExternal(url));
 ipcMain.on("app:quit", () => quit());
 ipcMain.on("app:notify", (_e, n) => notify(n));
 ipcMain.on("app:setUnread", (_e, n) => setUnread(n));
+ipcMain.on("app:restartToUpdate", () => restartToUpdate());
+ipcMain.handle("app:updateReady", () => updateReady);
 
 /* ------------------------------------------------------------------ */
 /*  Lifecycle                                                          */
@@ -250,7 +284,9 @@ app.whenReady().then(() => {
     getState: () => ws.get(),
     isVisible: () => !!(win && win.isVisible()),
     toggleVisible, setAlwaysOnTop, setStartOnLogin, quit,
+    updateReady: () => updateReady, restartToUpdate,
   });
+  setupUpdates();
   // First launch of the installed app: start on login is on by default.
   if (ws.isFirstRun()) setStartOnLogin(true);
 });

@@ -1,22 +1,78 @@
 {
   "name": "juno",
   "productName": "Juno",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Pixel-art DSA placement checklist widget with a study buddy",
+  "author": "moserkfr",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/moserkfr/juno.git"
+  },
   "main": "src/main/main.js",
   "private": true,
   "scripts": {
     "build": "node scripts/build.mjs",
     "start": "npm run build && electron .",
-    "dist": "npm run build && electron-builder --win"
+    "icon": "node scripts/make-icon.cjs",
+    "dist": "node scripts/build.mjs --prod && electron-builder --win --publish never",
+    "release": "node scripts/release.cjs"
   },
-  "devDependencies": {
-    "electron": "^33.4.11",
-    "esbuild": "^0.24.2"
+  "build": {
+    "appId": "com.juno.app",
+    "productName": "Juno",
+    "copyright": "Copyright © 2026 moserkfr",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "!dist/**/*.map",
+      "src/main/**/*",
+      "src/preload/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "Juno-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Juno",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "moserkfr",
+        "repo": "juno",
+        "releaseType": "release"
+      }
+    ]
   },
   "dependencies": {
+    "electron-updater": "^6.8.11"
+  },
+  "devDependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",
     "@fontsource/silkscreen": "^5.3.0",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.2",
     "firebase": "^13.1.0"
   }
 }

@@ -62,6 +62,10 @@ export const settingsView = {
     const notif = toggle("Desktop notifications", () => actions.notifyEnabled(), v => actions.setNotify(v));
     const testBtn = h("button.pbtn.small", { onclick: () => actions.testNotify() }, "TEST");
 
+    /* ---- about / updates ---- */
+    const version = h("span.grow");
+    const updBtn = h("button.pbtn.small.accent", { style: { display: "none" }, onclick: () => api.restartToUpdate() });
+
     const charPicker = createAvatarPicker(id => actions.setPrefs({ avatar: id }));
 
     /* ---- account ---- */
@@ -99,6 +103,7 @@ export const settingsView = {
         h("div.row", {}, h("span.grow", {}, "Desktop notifications"), testBtn, notif.row.lastChild),
         h("p.muted", { style: { fontSize: "12px", marginTop: "6px" } },
           "Start on login only applies to the installed app.")),
+      h("section.card.pbox", {}, h("h3", {}, "ABOUT"), h("div.row", {}, version, updBtn)),
     );
 
     function update(s) {
@@ -111,6 +116,9 @@ export const settingsView = {
         opLabel.textContent = opacity.value + "%";
       }
       aot.sync(); sol.sync(); notif.sync();
+      version.textContent = "Juno v" + (s.win.version || "?");
+      updBtn.style.display = s.update ? "" : "none";
+      updBtn.textContent = s.update ? `RESTART TO UPDATE (v${s.update})` : "";
       charPicker.update(s.prefs.avatar);
     }
     update(s0);

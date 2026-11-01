@@ -32,9 +32,12 @@ contextBridge.exposeInMainWorld("juno", {
   quit: () => ipcRenderer.send("app:quit"),
   notify: (title, body) => ipcRenderer.send("app:notify", { title: String(title), body: String(body) }),
   setUnread: n => ipcRenderer.send("app:setUnread", Number(n) || 0),
+  restartToUpdate: () => ipcRenderer.send("app:restartToUpdate"),
+  updateReady: () => ipcRenderer.invoke("app:updateReady"),
 
   onState: cb => on("window:state", cb),
   onVisibility: cb => on("window:visibility", cb),
   onFocus: cb => on("window:focus", cb),
   onNavigate: cb => on("app:navigate", cb),
+  onUpdate: cb => on("app:update", cb),
 });
