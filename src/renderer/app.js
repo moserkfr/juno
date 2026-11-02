@@ -10,6 +10,7 @@ import { computeProgress, findSub, PLAN } from "../data/plan.js";
 import { flag, unflag, reviewed, isEmpty, startOfDay } from "../data/review.js";
 import { reviewView, dueCount } from "./views/review.js";
 import { listView } from "./views/list.js";
+import { goalsView, GOAL_MAX } from "./views/goals.js";
 import { applyTheme } from "./ui/themes.js";
 import { createTitlebar } from "./ui/titlebar.js";
 import { createStatusbar } from "./ui/statusbar.js";
@@ -40,6 +41,7 @@ const store = createStore({
   prefs,
   win: {},                 // window state mirrored from the main process
   items: {},               // my progress items (synced with Firestore)
+  goals: {},               // my to-do goals { id: { text, done, createdAt, doneAt? } } (synced)
   itemsLoaded: false,      // true once Firestore (or its cache) delivered my items
   sync: "saved",           // saving | saved | offline | error
   people: {},              // everyone's public data (firebase/buddy.js), read-only
@@ -83,6 +85,7 @@ const sync = createSync(store, {
     // so our own saves echoing back never yank the window around.
     if (first) api.applyPrefs({ window: win, opacity, alwaysOnTop });
   },
+  onGoals: goals => store.set({ goals }),
   onLegacyDone: uid => dropLegacyItems(uid),
   onStatus: sync => store.set({ sync }),
   onError(e, what) {
@@ -292,6 +295,36 @@ const actions = {
       return note ? { ...rest, note, updatedAt: now } : { ...rest, updatedAt: now };
     });
   },
+  addGoal(text) {
+    const t = String(text || "").trim().slice(0, GOAL_MAX);
+    if (!t) return;
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    store.set({ goals: { ...store.get().goals, [id]: { text: t, done: false, createdAt: Date.now() } } });
+    sync.markGoal(id);
+  },
+  toggleGoal(id) {
+    const g = store.get().goals[id];
+    if (!g) return;
+    const { doneAt: _old, ...rest } = g;
+    const next = g.done ? { ...rest, done: false } : { ...rest, done: true, doneAt: Date.now() };
+    store.set({ goals: { ...store.get().goals, [id]: next } });
+    sync.markGoal(id);
+    if (next.done) scene.mascot.celebrate();
+  },
+  deleteGoal(id) {
+    const goals = { ...store.get().goals };
+    if (!goals[id]) return;
+    delete goals[id];
+    store.set({ goals });
+    sync.markGoal(id);
+  },
+  clearDoneGoals() {
+    const goals = { ...store.get().goals };
+    const ids = Object.keys(goals).filter(id => goals[id].done);
+    ids.forEach(id => { delete goals[id]; });
+    store.set({ goals });
+    ids.forEach(id => sync.markGoal(id));
+  },
   setPrefs(patch) {
     const s = store.get();
     const next = { ...s.prefs, ...patch };
@@ -337,6 +370,7 @@ const actions = {
 
 const VIEWS = {
   list: listView,
+  goals: goalsView,
   review: reviewView,
   buddy: buddyView,
   chat: chatView,
@@ -445,7 +479,7 @@ function onAuth(a) {
     // this was, so a different account signing in here doesn't inherit it.
     const p = { ...store.get().prefs, avatar: null };
     saveLocalPrefs(p);
-    store.set({ people: {}, messages: [], chatReadAt: 0, prefs: p, itemsLoaded: false });
+    store.set({ people: {}, messages: [], chatReadAt: 0, prefs: p, itemsLoaded: false, goals: {} });
   }
   if (a.status === "ready" && was !== "ready" && was !== "loading") {
     toast("WELCOME!", `Signed in as ${a.user.displayName}.`, "info");
@@ -484,6 +518,11 @@ if (PREVIEW) {
       { id: "5", uid: "buddy", name: "Ruhani", type: "text", text: "study session at 9? i'll do binary search 🔍", at: Date.now() - 3 * min },
     ],
     prefs: { ...store.get().prefs, avatar: "manosh" },
+    goals: {
+      g1: { text: "solve 5 array problems", done: false, createdAt: Date.now() - 2 * hr },
+      g2: { text: "mock interview with Ruhani on friday", done: false, createdAt: Date.now() - hr },
+      g3: { text: "revise recursion notes", done: true, createdAt: Date.now() - 30 * hr, doneAt: Date.now() - 20 * min },
+    },
     people: {
       preview: { uid: "preview", feed: [{ uid: "preview", text: "finished Recursion basics", at: Date.now() - 26 * hr }] },
       buddy: { uid: "buddy", displayName: "Ruhani", prefs: { track: "ds", hours: 2, avatar: "ruhani" }, lastActive: Date.now() - 2 * 60_000,
@@ -506,10 +545,10 @@ api.onFocus(focused => store.set({ winFocused: focused }));
 // Re-check the mascot's mood every 10 min (it gets sleepy after midnight).
 setInterval(() => store.set({ mood: moodFor(store.get().items) }), 10 * 60_000);
 
-// Ctrl+1..5 switches tabs
+// Ctrl+1..6 switches tabs
 addEventListener("keydown", e => {
   if (store.get().auth.status !== "ready") return;
-  if (e.ctrlKey && e.key >= "1" && e.key <= "5") actions.go(TABS[+e.key - 1].id);
+  if (e.ctrlKey && e.key >= "1" && e.key <= String(TABS.length)) actions.go(TABS[+e.key - 1].id);
 });
 
 render(store.get());

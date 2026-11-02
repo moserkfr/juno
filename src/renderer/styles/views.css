@@ -224,3 +224,13 @@
 .cinput { flex: 1; resize: none; field-sizing: content; min-height: 34px; max-height: 96px; font-size: 18px; }
 .csend { height: 34px; width: 40px; padding: 0; }
 .ccount { font-size: 14px; color: var(--muted); }
+
+/* ---------- GOALS ---------- */
+.gadd { margin: 0 0 12px; gap: 8px; }
+.gadd .ginput { flex: 1; font-size: 18px; }
+.glist { padding: 4px 10px; }
+.goal.is-done .stext { text-decoration: none; }
+.goal.is-done .gtext { text-decoration: line-through; text-decoration-thickness: 2px; }
+.sbtn.del:hover { background: var(--a3); color: var(--line); }
+.gdonehead { margin-top: 4px; }
+.gdonehead .rsec { margin-bottom: 4px; }

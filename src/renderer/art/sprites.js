@@ -107,7 +107,26 @@ const GEAR = [
   "................",
 ];
 
-export const NAV_ICONS = { list: LIST, review: STAR, buddy: BUDDY, chat: CHAT, settings: GEAR };
+const FLAG = [
+  "................",
+  "..oo............",
+  "..oaoooooooo....",
+  "..oaocccccccoo..",
+  "..oaocwcccccco..",
+  "..oaoccccccco...",
+  "..oaocccccco....",
+  "..oaoccccccco...",
+  "..oaooccccccoo..",
+  "..oao.oooooooo..",
+  "..oao...........",
+  "..oao...........",
+  "..oao...........",
+  ".ooaoo..........",
+  "obbbbbo.........",
+  "ooooooo.........",
+];
+
+export const NAV_ICONS = { list: LIST, goals: FLAG, review: STAR, buddy: BUDDY, chat: CHAT, settings: GEAR };
 export const navIcon = (name, scale = 2) => pixelSVG(NAV_ICONS[name], C, scale);
 
 /* ---------------- title-bar glyphs (7x7, colour = currentColor) ---------------- */

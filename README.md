@@ -4,6 +4,7 @@ An always-on-top pixel-art desktop widget for a DSA placement study plan, built 
 Tick topics, schedule spaced reviews, see each other's progress, and chat.
 
 - **LIST**: phases → topics → subtopics with ✓ DONE / ★ REVIEW, track (DS/ML · SDE · Everything) and hours/day, "≈ weeks left"
+- **GOALS**: your own to-do list (add, tick off, delete, clear done), synced to your account
 - **REVIEW**: flagged items with reviews at +1 / +7 / +30 days and short notes
 - **BUDDY**: both players side by side (each computed with their own settings) and an activity feed
 - **CHAT**: real-time messages, progress shares and nudges, with desktop notifications

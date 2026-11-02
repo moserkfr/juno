@@ -2,11 +2,11 @@
  * Two-way sync of MY data with Firestore.
  *
  *   users/{uid}                 { displayName, lastActive, prefs }
- *   users/{uid}/progress/main   { items, summary, updatedAt }
+ *   users/{uid}/progress/main   { items, goals, summary, updatedAt }
  *
  * Rules of the road:
  *  - Writes are debounced (800 ms) and only send what changed ("dirty").
- *  - Items are written with mergeFields + a FieldPath per item, which REPLACES
+ *  - Items (and goals) are written with mergeFields + a FieldPath per item, which REPLACES
  *    that one item (so removed fields really disappear) without touching others
  *    (so edits on two devices to different items both survive).
  *  - Snapshot callbacks only update the store; they never write. While local
@@ -25,6 +25,7 @@ const HEARTBEAT_MS = 5 * 60_000; // lastActive refresh while the app is open
 /**
  * @param store           the app store (reads items/prefs/win at flush time)
  * @param hooks.onItems   (items) => void        remote items arrived
+ * @param hooks.onGoals   (goals) => void        remote goals arrived
  * @param hooks.onPrefs   (prefs, first) => void remote prefs arrived
  * @param hooks.onStatus  ("saving"|"saved"|"offline"|"error") => void
  * @param hooks.onError   (err, what) => void
@@ -36,12 +37,13 @@ export function createSync(store, hooks) {
   let timer = null;
   let heartbeat = null;
   let dirtyItems = new Set();
+  let dirtyGoals = new Set();
   let dirtyPrefs = false;
   let firstPrefs = true;
   let legacy = null;     // stage-4 local items to migrate once
   let inflight = 0;
 
-  const pending = () => !!timer || dirtyItems.size > 0 || dirtyPrefs;
+  const pending = () => !!timer || dirtyItems.size > 0 || dirtyGoals.size > 0 || dirtyPrefs;
 
   function start(userId, legacyItems = {}) {
     stop();
@@ -66,10 +68,12 @@ export function createSync(store, hooks) {
         } else if (!snap.metadata.fromCache) {
           hooks.onItems({});
         }
+        if (!snap.metadata.fromCache) hooks.onGoals?.({});
         return;
       }
       if (legacy) { legacy = null; hooks.onLegacyDone?.(uid); } // account already has data
       hooks.onItems(snap.data().items || {});
+      hooks.onGoals?.(snap.data().goals || {});
     }, e => hooks.onError(e, "progress")));
 
     unsubs.push(onSnapshot(refs.user, snap => {
@@ -95,7 +99,7 @@ export function createSync(store, hooks) {
     unsubs = [];
     clearTimeout(timer); timer = null;
     clearInterval(heartbeat);
-    dirtyItems = new Set(); dirtyPrefs = false;
+    dirtyItems = new Set(); dirtyGoals = new Set(); dirtyPrefs = false;
     uid = null; refs = null;
   }
 
@@ -106,6 +110,8 @@ export function createSync(store, hooks) {
 
   /** Mark an item as changed (call after updating the store). */
   function markItem(id) { dirtyItems.add(id); schedule(); }
+  /** Mark a goal as changed (call after updating the store). */
+  function markGoal(id) { dirtyGoals.add(id); schedule(); }
   /** Mark prefs (track/hours/theme/avatar/window) as changed. */
   function markPrefs() { dirtyPrefs = true; schedule(); }
 
@@ -129,19 +135,25 @@ export function createSync(store, hooks) {
   /** Send everything dirty. Safe to call any time (e.g. before sign-out). */
   async function flush() {
     clearTimeout(timer); timer = null;
-    if (!refs || (!dirtyItems.size && !dirtyPrefs)) return;
+    if (!refs || (!dirtyItems.size && !dirtyGoals.size && !dirtyPrefs)) return;
     const s = store.get();
     const ids = [...dirtyItems];
+    const goalIds = [...dirtyGoals];
     const prefsChanged = dirtyPrefs;
-    dirtyItems = new Set(); dirtyPrefs = false;
+    dirtyItems = new Set(); dirtyGoals = new Set(); dirtyPrefs = false;
 
     // Summary always reflects the latest items AND track/hours.
     const summary = summarize(computeProgress(s.items, s.prefs.track, s.prefs.hours));
-    const pdata = { summary, updatedAt: serverTimestamp(), items: {} };
+    const pdata = { summary, updatedAt: serverTimestamp(), items: {}, goals: {} };
     const fields = ["summary", "updatedAt"];
     for (const id of ids) {
       pdata.items[id] = s.items[id] ?? deleteField(); // empty item -> remove from map
       fields.push(new FieldPath("items", id));
+    }
+    const goals = s.goals || {};
+    for (const id of goalIds) {
+      pdata.goals[id] = goals[id] ?? deleteField(); // deleted goal -> remove from map
+      fields.push(new FieldPath("goals", id));
     }
 
     const writes = [setDoc(refs.progress, pdata, { mergeFields: fields })];
@@ -176,5 +188,5 @@ export function createSync(store, hooks) {
       .catch(e => hooks.onError(e, "heartbeat"));
   }
 
-  return { start, stop, flush, markItem, markPrefs, touch, isPending: pending };
+  return { start, stop, flush, markItem, markGoal, markPrefs, touch, isPending: pending };
 }

@@ -8,6 +8,7 @@ import { navIcon } from "../art/sprites.js";
 
 export const TABS = [
   { id: "list", label: "LIST" },
+  { id: "goals", label: "GOALS" },
   { id: "review", label: "REVIEW", badge: s => s.due },
   { id: "buddy", label: "BUDDY" },
   { id: "chat", label: "CHAT", badge: s => s.unread },
