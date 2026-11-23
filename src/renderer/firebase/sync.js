@@ -2,7 +2,7 @@
  * Two-way sync of MY data with Firestore.
  *
  *   users/{uid}                 { displayName, lastActive, prefs }
- *   users/{uid}/progress/main   { items, goals, summary, updatedAt }
+ *   users/{uid}/progress/main   { items, goals, summary, planVersion, updatedAt }
  *
  * Rules of the road:
  *  - Writes are debounced (800 ms) and only send what changed ("dirty").
@@ -13,10 +13,13 @@
  *    edits are pending, incoming snapshots are ignored: our write wins and
  *    Firestore immediately emits a new snapshot that includes it.
  *  - Offline: Firestore's persistent cache queues writes and replays them later.
+ *  - Plan upgrades: every write stamps planVersion. If the server copy has an
+ *    older one (the plan's subs/weights changed since the summary was saved),
+ *    re-save the summary once items AND prefs are loaded (it depends on both).
  */
 import { doc, onSnapshot, setDoc, serverTimestamp, deleteField, FieldPath } from "firebase/firestore";
 import { db } from "./init.js";
-import { computeProgress, summarize } from "../../data/plan.js";
+import { computeProgress, summarize, PLAN_VERSION } from "../../data/plan.js";
 import { normalizePrefs } from "../core/prefs.js";
 
 const DEBOUNCE_MS = 800;
@@ -39,11 +42,21 @@ export function createSync(store, hooks) {
   let dirtyItems = new Set();
   let dirtyGoals = new Set();
   let dirtyPrefs = false;
-  let firstPrefs = true;
+  let dirtySummary = false; // summary-only write (plan upgrade)
+  let planStale = false;    // server summary was computed with an older PLAN_VERSION
+  let firstPrefs = true;    // false once the profile doc (prefs) has been seen
   let legacy = null;     // stage-4 local items to migrate once
   let inflight = 0;
 
-  const pending = () => !!timer || dirtyItems.size > 0 || dirtyGoals.size > 0 || dirtyPrefs;
+  const pending = () => !!timer || dirtyItems.size > 0 || dirtyGoals.size > 0 || dirtyPrefs || dirtySummary;
+
+  /** Plan changed since the summary was saved: re-save it once prefs are known too. */
+  function maybeUpgradeSummary() {
+    if (!planStale || firstPrefs) return;
+    planStale = false;
+    dirtySummary = true;
+    schedule();
+  }
 
   function start(userId, legacyItems = {}) {
     stop();
@@ -74,6 +87,14 @@ export function createSync(store, hooks) {
       if (legacy) { legacy = null; hooks.onLegacyDone?.(uid); } // account already has data
       hooks.onItems(snap.data().items || {});
       hooks.onGoals?.(snap.data().goals || {});
+      // Docs saved before PLAN_VERSION existed count as version 1. Don't wait
+      // for a server-confirmed snapshot: when the cache already matches the
+      // server, Firestore never sends one. Worst case (another device already
+      // upgraded) is one redundant, harmless summary write.
+      if ((snap.data().planVersion || 1) < PLAN_VERSION) {
+        planStale = true;
+        maybeUpgradeSummary();
+      }
     }, e => hooks.onError(e, "progress")));
 
     unsubs.push(onSnapshot(refs.user, snap => {
@@ -83,10 +104,12 @@ export function createSync(store, hooks) {
         // New account: upload whatever prefs this device has.
         if (!snap.metadata.fromCache) { dirtyPrefs = true; schedule(); }
         firstPrefs = false;
+        maybeUpgradeSummary();
         return;
       }
       hooks.onPrefs(normalizePrefs(prefs), firstPrefs);
       firstPrefs = false;
+      maybeUpgradeSummary();
     }, e => hooks.onError(e, "profile")));
 
     heartbeat = setInterval(() => {
@@ -100,6 +123,7 @@ export function createSync(store, hooks) {
     clearTimeout(timer); timer = null;
     clearInterval(heartbeat);
     dirtyItems = new Set(); dirtyGoals = new Set(); dirtyPrefs = false;
+    dirtySummary = false; planStale = false;
     uid = null; refs = null;
   }
 
@@ -135,17 +159,18 @@ export function createSync(store, hooks) {
   /** Send everything dirty. Safe to call any time (e.g. before sign-out). */
   async function flush() {
     clearTimeout(timer); timer = null;
-    if (!refs || (!dirtyItems.size && !dirtyGoals.size && !dirtyPrefs)) return;
+    if (!refs || (!dirtyItems.size && !dirtyGoals.size && !dirtyPrefs && !dirtySummary)) return;
     const s = store.get();
     const ids = [...dirtyItems];
     const goalIds = [...dirtyGoals];
     const prefsChanged = dirtyPrefs;
-    dirtyItems = new Set(); dirtyGoals = new Set(); dirtyPrefs = false;
+    dirtyItems = new Set(); dirtyGoals = new Set(); dirtyPrefs = false; dirtySummary = false;
 
-    // Summary always reflects the latest items AND track/hours.
+    // Summary always reflects the latest items AND track/hours, computed with
+    // this build's plan, so stamp which plan version it was computed with.
     const summary = summarize(computeProgress(s.items, s.prefs.track, s.prefs.hours));
-    const pdata = { summary, updatedAt: serverTimestamp(), items: {}, goals: {} };
-    const fields = ["summary", "updatedAt"];
+    const pdata = { summary, planVersion: PLAN_VERSION, updatedAt: serverTimestamp(), items: {}, goals: {} };
+    const fields = ["summary", "planVersion", "updatedAt"];
     for (const id of ids) {
       pdata.items[id] = s.items[id] ?? deleteField(); // empty item -> remove from map
       fields.push(new FieldPath("items", id));

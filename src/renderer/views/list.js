@@ -1,19 +1,21 @@
 /**
  * LIST tab: the checklist.
- *   header  — overall % bar, "≈ X weeks left", track + hours selectors
+ *   header  — overall % bar, "≈ X weeks left", track + hours selectors,
+ *             "? PATTERNS" button (opens the pattern cheat sheet overlay)
  *   body    — phases -> collapsible topics -> subtopics with ✓ DONE / ★ REVIEW
- *             + topic detail (how to study, key problems, resources, self-check)
+ *             + topic detail (key problems + target, resources)
  *
  * The header is built once; the body is rebuilt only when items or prefs
  * change (cheap: collapsed topics don't render their subs). Which topics are
  * open is remembered in `open` so a rebuild never collapses what you opened.
  */
 import { h, raw } from "../core/dom.js";
-import { glyph, sparkle } from "../art/sprites.js";
+import { glyph } from "../art/sprites.js";
 import { createAvatarPicker } from "../ui/avatarPicker.js";
 import {
   TRACKS, HOURS, schedule, topicStats, subId, subText, subPdf, topicHasPdf, fmtWeeks,
 } from "../../data/plan.js";
+import { CLUES, CONSTRAINTS } from "../../data/patterns.js";
 
 const ROLE = { both: ["Both", ""], sde: ["SDE", "t-sde"], top: ["Top-tier", "t-top"] };
 const tag = (text, cls = "") => h("span.tag" + (cls ? "." + cls : ""), {}, text);
@@ -32,10 +34,13 @@ export const listView = {
     const fill = h("i");
     const trackBtns = TRACKS.map(t => h("button.pbtn.small", { title: t.hint, onclick: () => actions.setPrefs({ track: t.id }) }, t.short));
     const hourBtns = HOURS.map(hr => h("button.pbtn.small", { onclick: () => actions.setPrefs({ hours: hr }) }, hr + "h"));
+    const patternsBtn = h("button.pbtn.small", {
+      title: "Pattern cheat sheet", "aria-haspopup": "dialog", onclick: () => openPatterns(),
+    }, "? PATTERNS");
     const header = h("section.card.pbox.lhead", {},
       h("div.row", {}, pctText, countText, h("span.grow"), etaText),
       h("div.pbar", {}, fill),
-      h("div.row.controls", {}, h("span.label.clabel", {}, "TRACK"), h("div.seg", {}, trackBtns)),
+      h("div.row.controls", {}, h("span.label.clabel", {}, "TRACK"), h("div.seg", {}, trackBtns), h("span.grow"), patternsBtn),
       h("div.row.controls", {}, h("span.label.clabel", {}, "H/DAY"), h("div.seg", {}, hourBtns)),
     );
     const syncText = h("span.label.synctext");
@@ -78,13 +83,11 @@ export const listView = {
 
     function detail(t) {
       return h("div.detail", {},
-        h("div", {}, h("h4", {}, "HOW TO STUDY"), h("p.selectable", {}, t.method)),
         h("div", {}, h("h4", {}, "KEY PROBLEMS · ", h("span.muted", {}, "target " + t.target)),
           h("p.selectable", {}, t.probs.join(" · "))),
         h("div", {}, h("h4", {}, "RESOURCES"),
           h("ul.res", {}, t.res.map(r => h("li", {},
             h("button.link", { title: r.u, onclick: () => api.openExternal(r.u) }, "↗ " + r.n))))),
-        h("div.selfcheck", {}, raw(sparkle(2)), h("p.selectable", {}, h("b", {}, "DONE WHEN: "), t.check)),
       );
     }
 
@@ -143,6 +146,41 @@ export const listView = {
       body.querySelector(`[data-id="${id}"]`)?.scrollIntoView({ block: "start" });
     }
 
+    /* ---------------- pattern cheat sheet overlay ---------------- */
+
+    // Covers the whole screen area (scene + list) but stays under toasts.
+    // Closes on ✕, Esc, or a click on the dimmed backdrop.
+    let sheet = null;
+    const onKey = e => { if (e.key === "Escape") closePatterns(); };
+    const table = (cols, rows) => h("table.ptable.selectable", {},
+      h("thead", {}, h("tr", {}, cols.map(c => h("th", {}, c)))),
+      h("tbody", {}, rows.map(([a, b]) => h("tr", {}, h("td", {}, a), h("td.pthink", {}, b)))));
+
+    function openPatterns() {
+      if (sheet) return;
+      const closeBtn = h("button.pbtn.small", { title: "Close (Esc)", onclick: () => closePatterns() }, "✕");
+      sheet = h("div.psheet", {
+        role: "dialog", "aria-modal": "true", "aria-label": "Pattern cheat sheet",
+        onclick: e => { if (e.target === sheet) closePatterns(); },
+      }, h("section.card.pbox.thick.psheet-box", {},
+        h("h3.row", {}, "PATTERN CHEAT SHEET", h("span.grow"), closeBtn),
+        h("h4", {}, "IF THE PROBLEM SAYS… → THINK…"),
+        table(["Problem says", "Think"], CLUES),
+        h("h4", {}, "CONSTRAINTS → TARGET COMPLEXITY"),
+        table(["Input size", "Aim for"], CONSTRAINTS)));
+      (el.closest(".screen") || document.body).append(sheet);
+      addEventListener("keydown", onKey);
+      closeBtn.focus();
+    }
+
+    function closePatterns() {
+      if (!sheet) return;
+      sheet.remove();
+      sheet = null;
+      removeEventListener("keydown", onKey);
+      if (patternsBtn.isConnected) patternsBtn.focus();
+    }
+
     /* ---------------- update ---------------- */
 
     let last = {};
@@ -164,6 +202,7 @@ export const listView = {
       }
     }
     update(store.get());
-    return { update };
+    // Switching tabs unmounts this view; don't leave the overlay behind.
+    return { update, destroy: closePatterns };
   },
 };
